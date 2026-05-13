@@ -163,7 +163,7 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
   }
   if (!req.cookies.user) return res.status(401).send('请先登录');
   const { title } = req.body;
-  const videoUrl = req.file.path; // Cloudinary 返回的安全链接
+  const videoUrl = req.file.path;
   try {
     await pool.query('INSERT INTO videos (title, filename, uploaded_by) VALUES ($1, $2, $3)', [title, videoUrl, req.cookies.user]);
     res.redirect('/L0Ks.html');
