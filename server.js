@@ -1,30 +1,50 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
-const Database = require('better-sqlite3');
+const { Pool } = require('pg');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
-// ---- 初始化数据库（持久化文件） ----
-const db = new Database('data.db');
-db.pragma('journal_mode = WAL');
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS videos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    filename TEXT NOT NULL,
-    uploaded_by TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+// ---- Cloudinary 配置 ----
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// ---- 数据库连接（PostgreSQL） ----
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+// 初始化表结构
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS videos (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        uploaded_by TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    console.log('PostgreSQL 数据库已连接');
+  } catch (err) {
+    console.error('数据库初始化失败:', err.message);
+  }
+})();
 
 // ---- 托管前端静态文件 ----
 app.use(express.static('public'));
@@ -35,13 +55,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---- 文件上传配置 ----
-const storage = multer.diskStorage({
-  destination: 'public/videos/',
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, uuidv4() + ext);
-  }
+// ---- 文件上传配置（Cloudinary） ----
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'loks-videos',
+    resource_type: 'video',
+    allowed_formats: ['mp4', 'webm', 'mov', 'avi', 'mkv'],
+    transformation: [{ quality: 'auto' }],
+    public_id: (req, file) => uuidv4() + path.extname(file.originalname),
+  },
 });
 const upload = multer({ storage });
 
@@ -77,19 +100,16 @@ function csrfProtection(req, res, next) {
 app.get('/', (req, res) => res.redirect('/L0Ks.html'));
 
 // 注册
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) {
-    return res.send('用户名和密码不能为空');
-  }
+  if (!username || !password) return res.send('用户名和密码不能为空');
   try {
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    const check = db.prepare('SELECT * FROM users WHERE username = ?');
-    const existing = check.get(username);
-    if (existing) {
-      db.prepare('DELETE FROM users WHERE username = ?').run(username);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const existing = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    if (existing.rows.length > 0) {
+      await pool.query('DELETE FROM users WHERE username = $1', [username]);
     }
-    db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username, hashedPassword);
+    await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
     res.send('注册成功！');
   } catch (err) {
     console.error('注册出错:', err.message);
@@ -98,17 +118,14 @@ app.post('/register', (req, res) => {
 });
 
 // 登录
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) {
-    return res.send('用户名或密码不能为空');
-  }
+  if (!username || !password) return res.send('用户名或密码不能为空');
   try {
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-    if (!user || !user.password) {
-      return res.send('用户名或密码错误');
-    }
-    const match = bcrypt.compareSync(password, user.password);
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const user = result.rows[0];
+    if (!user || !user.password) return res.send('用户名或密码错误');
+    const match = await bcrypt.compare(password, user.password);
     if (match) {
       res.cookie('user', username, { httpOnly: true, sameSite: 'lax' });
       res.send('登录成功！');
@@ -126,32 +143,31 @@ app.get('/api/user', (req, res) => {
 });
 
 // 视频列表
-app.get('/api/videos', (req, res) => {
+app.get('/api/videos', async (req, res) => {
   try {
-    db.exec(`CREATE TABLE IF NOT EXISTS videos (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      filename TEXT NOT NULL,
-      uploaded_by TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );`);
-    const videos = db.prepare('SELECT * FROM videos ORDER BY created_at DESC').all();
-    res.json(videos);
+    const result = await pool.query('SELECT * FROM videos ORDER BY created_at DESC');
+    res.json(result.rows);
   } catch (err) {
     console.error('获取视频列表失败:', err.message);
     res.json([]);
   }
 });
 
-// 上传视频
-app.post('/api/upload', csrfProtection, upload.single('video'), (req, res) => {
+// 上传视频（存入 Cloudinary）
+app.post('/api/upload', csrfProtection, upload.single('video'), async (req, res) => {
   if (!req.cookies.user) return res.status(401).send('请先登录');
   const { title } = req.body;
-  const filename = req.file.filename;
-  db.prepare('INSERT INTO videos (title, filename, uploaded_by) VALUES (?, ?, ?)').run(title, filename, req.cookies.user);
-  res.redirect('/L0Ks.html');
+  const videoUrl = req.file.path; // Cloudinary 返回的安全链接
+  try {
+    await pool.query('INSERT INTO videos (title, filename, uploaded_by) VALUES ($1, $2, $3)', [title, videoUrl, req.cookies.user]);
+    res.redirect('/L0Ks.html');
+  } catch (err) {
+    console.error('上传失败:', err.message);
+    res.send('上传失败，请稍后重试');
+  }
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log('私人番剧站已启动 → http://localhost:' + (process.env.PORT || 3000));
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log('私人番剧站已启动 → 端口 ' + port);
 });
