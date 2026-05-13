@@ -154,7 +154,13 @@ app.get('/api/videos', async (req, res) => {
 });
 
 // 上传视频（存入 Cloudinary）
-app.post('/api/upload', csrfProtection, upload.single('video'), async (req, res) => {
+app.post('/api/upload', upload.single('video'), async (req, res) => {
+  // 手动 CSRF 检查
+  const cookieToken = req.cookies.csrf_token;
+  const bodyToken = req.body._csrf;
+  if (!cookieToken || !bodyToken || cookieToken !== bodyToken) {
+    return res.status(403).send('CSRF 令牌无效');
+  }
   if (!req.cookies.user) return res.status(401).send('请先登录');
   const { title } = req.body;
   const videoUrl = req.file.path; // Cloudinary 返回的安全链接
@@ -165,9 +171,4 @@ app.post('/api/upload', csrfProtection, upload.single('video'), async (req, res)
     console.error('上传失败:', err.message);
     res.send('上传失败，请稍后重试');
   }
-});
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log('私人番剧站已启动 → 端口 ' + port);
 });

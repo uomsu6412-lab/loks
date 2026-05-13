@@ -46,7 +46,7 @@ async function loadVideos() {
   videos.forEach(function(v) {
     var card = document.createElement('div');
     card.className = 'card';
-    card.innerHTML = '<video controls src="/videos/' + v.filename + '"></video>' +
+card.innerHTML = '<video controls src="' + v.filename + '"></video>' +
                      '<h3>' + v.title + '</h3>' +
                      '<div class="meta">上传者：' + v.uploaded_by + '</div>';
     container.appendChild(card);
