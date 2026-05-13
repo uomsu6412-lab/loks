@@ -152,6 +152,6 @@ app.post('/api/upload', csrfProtection, upload.single('video'), (req, res) => {
   res.redirect('/L0Ks.html');
 });
 
-app.listen(3000, () => {
-  console.log('私人番剧站已启动 → http://localhost:3000');
+app.listen(process.env.PORT || 3000, () => {
+  console.log('私人番剧站已启动 → http://localhost:' + (process.env.PORT || 3000));
 });
