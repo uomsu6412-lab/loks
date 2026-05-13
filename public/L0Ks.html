@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 L0Ks - 私人番剧站</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+    <style>
+        body {
+            background-color: #1a1a2e;
+            font-family: '微软雅黑';
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            color: #e94560;
+            margin-top: 30px;
+        }
+        .user-area {
+            color: white;
+            margin: 10px;
+            font-size: 14px;
+        }
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+        }
+        .card {
+            background: #16213e;
+            max-width: 280px;
+            width: 90%;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: left;
+        }
+        .card video {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+        }
+        .card h3 {
+            color: white;
+            margin: 10px 0 5px;
+        }
+        .card .meta {
+            color: #a0a0b0;
+            font-size: 13px;
+        }
+        .form-box {
+            margin: 40px auto;
+            width: 300px;
+            max-width: 90%;
+            text-align: left;
+            color: white;
+        }
+        .form-box input {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .form-box button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-login { background: #e94560; color: white; }
+        .btn-register { background: #0f3460; color: white; }
+        .btn-upload { background: #8b5cf6; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🎬 L0Ks</h1>
+    <div class="user-area" id="userArea">未登录</div>
+
+    <div class="card-container" id="videoContainer">
+        <p style="color: white;">加载中...</p>
+    </div>
+
+    <div class="form-box" id="uploadBox" style="display: none;">
+        <h3>📤 分享片源</h3>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="hidden" id="csrfInputUpload" name="_csrf">
+            <input id="videoTitle" name="title" placeholder="片名">
+            <input type="file" id="videoFile" name="video" accept="video/*" style="padding: 4px;">
+            <button type="submit" class="btn-upload">上传</button>
+        </form>
+        <div id="uploadMsg" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="form-box" id="authBox">
+        <h3>🔐 用户登录</h3>
+        <form id="loginForm">
+            <input type="hidden" id="csrfInputLogin" name="_csrf">
+            <input name="username" id="loginUsername" placeholder="用户名">
+            <input name="password" id="loginPassword" type="password" placeholder="密码">
+            <button type="submit" class="btn-login">登录</button>
+        </form>
+        <div id="loginMsg" style="margin-top: 10px;"></div>
+
+        <h3 style="margin-top: 30px;">📝 注册新用户</h3>
+        <form id="registerForm">
+            <input type="hidden" id="csrfInputReg" name="_csrf">
+            <input name="username" id="regUsername" placeholder="用户名">
+            <input name="password" id="regPassword" type="password" placeholder="密码">
+            <button type="submit" class="btn-register">注册</button>
+        </form>
+        <div id="registerMsg" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- 所有 JavaScript 都在外部文件 app.js 中，完全符合严格 CSP -->
+    <script src="/app.js"></script>
+</body>
+</html>
