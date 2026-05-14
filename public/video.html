@@ -21,6 +21,12 @@
     .meta { color: #a0a0b0; font-size: 0.9rem; margin-bottom: 16px; }
     .meta span { margin-right: 16px; }
   </style>
+  <link rel="manifest" href="/manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js');
+  }
+</script>
 </head>
 <body>
   <a href="/L0Ks.html" class="back-link">← 返回列表</a>

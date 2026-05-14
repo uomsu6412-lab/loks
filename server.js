@@ -54,6 +54,8 @@ const pool = new Pool({
     await pool.query('ALTER TABLE videos ADD COLUMN IF NOT EXISTS thumbnail TEXT;');
     await pool.query('ALTER TABLE videos ADD COLUMN IF NOT EXISTS public_id TEXT;');
     await pool.query("ALTER TABLE videos ADD COLUMN IF NOT EXISTS category TEXT DEFAULT '其他';");
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname TEXT;');
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;');
 
     console.log('PostgreSQL 数据库已连接');
   } catch (err) {
@@ -73,6 +75,7 @@ app.use((req, res, next) => {
 // ==================== 6. multer 配置 ====================
 // 使用内存存储，直接拿到文件 buffer，然后传给 Cloudinary
 const upload = multer({ storage: multer.memoryStorage() });
+const uploadAvatar = multer({ storage: multer.memoryStorage() });
 
 // ==================== 7. 中间件 ====================
 app.use(express.urlencoded({ extended: false }));   // 解析表单数据
@@ -126,6 +129,84 @@ app.post('/register', async (req, res) => {
     console.error('注册出错:', err.message);
     res.send('注册失败，请稍后重试');
   }
+  // ==================== 用户资料相关路由 ====================
+
+// 获取当前登录用户的详细资料
+app.get('/api/profile', async (req, res) => {
+  if (!req.cookies.user) return res.status(401).json({ error: '未登录' });
+  try {
+    const result = await pool.query('SELECT username, nickname, avatar FROM users WHERE username = $1', [req.cookies.user]);
+    if (result.rows.length === 0) return res.status(404).json({ error: '用户不存在' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('获取用户资料失败:', err.message);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 更新昵称
+app.post('/api/profile/nickname', csrfProtection, async (req, res) => {
+  if (!req.cookies.user) return res.status(401).send('请先登录');
+  const { nickname } = req.body;
+  if (!nickname) return res.send('昵称不能为空');
+  try {
+    await pool.query('UPDATE users SET nickname = $1 WHERE username = $2', [nickname, req.cookies.user]);
+    res.send('昵称已更新');
+  } catch (err) {
+    console.error('更新昵称失败:', err.message);
+    res.status(500).send('更新失败');
+  }
+});
+
+// 上传头像（base64 格式，存储到 Cloudinary，然后更新数据库）
+app.post('/api/profile/avatar', upload.single('avatar'), async (req, res) => {
+  if (!req.cookies.user) return res.status(401).send('请先登录');
+  if (!req.file) return res.status(400).send('未收到图片');
+  // 手动 CSRF 验证
+  const cookieToken = req.cookies.csrf_token;
+  const bodyToken = req.body._csrf;
+  if (!cookieToken || !bodyToken || cookieToken !== bodyToken) {
+    return res.status(403).send('CSRF 令牌无效');
+  }
+  try {
+    const base64Image = req.file.buffer.toString('base64');
+    const dataUri = `data:${req.file.mimetype};base64,${base64Image}`;
+    const uploaded = await cloudinary.uploader.upload(dataUri, {
+      folder: 'loks-avatars',
+      transformation: [{ width: 150, height: 150, crop: 'fill', quality: 'auto' }],
+      public_id: 'avatar_' + req.cookies.user,
+      api_key: CLOUDINARY_API_KEY,
+      api_secret: CLOUDINARY_API_SECRET,
+      cloud_name: CLOUDINARY_CLOUD_NAME,
+    });
+    const avatarUrl = uploaded.secure_url;
+    await pool.query('UPDATE users SET avatar = $1 WHERE username = $2', [avatarUrl, req.cookies.user]);
+    res.send('头像已更新');
+  } catch (err) {
+    console.error('头像上传失败:', err.message);
+    res.status(500).send('头像上传失败');
+  }
+});
+
+// 修改密码
+app.post('/api/profile/password', csrfProtection, async (req, res) => {
+  if (!req.cookies.user) return res.status(401).send('请先登录');
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) return res.send('旧密码和新密码不能为空');
+  try {
+    const result = await pool.query('SELECT password FROM users WHERE username = $1', [req.cookies.user]);
+    const user = result.rows[0];
+    if (!user) return res.send('用户不存在');
+    const match = await bcrypt.compare(oldPassword, user.password);
+    if (!match) return res.send('旧密码错误');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password = $1 WHERE username = $2', [hashedPassword, req.cookies.user]);
+    res.send('密码已修改');
+  } catch (err) {
+    console.error('修改密码失败:', err.message);
+    res.status(500).send('修改失败');
+  }
+});
 });
 
 // --- 登录 ---

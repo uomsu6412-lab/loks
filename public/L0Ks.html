@@ -176,6 +176,12 @@
         .empty-state { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
         .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.6; }
     </style>
+    <link rel="manifest" href="/manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js');
+  }
+</script>
 </head>
 <body>
     <div class="particles" id="particles"></div>

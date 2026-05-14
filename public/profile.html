@@ -6,68 +6,182 @@
     <title>个人中心 - L0Ks</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👤</text></svg>">
     <style>
-        :root { --bg-start: #0a0a1a; --accent: #e94560; --text: #e0e0e0; }
+        :root { --bg-start: #0a0a1a; --accent: #e94560; --text: #e0e0e0; --card-bg: rgba(22,33,62,0.85); }
         body {
             font-family: 'Segoe UI', '微软雅黑', sans-serif;
             background: linear-gradient(135deg, var(--bg-start), #1a1a3e);
-            color: var(--text); padding: 20px;
+            color: var(--text); padding: 20px; max-width: 700px; margin: 0 auto;
         }
-        .back-link { color: var(--accent); text-decoration: none; }
-        h2 { margin-top: 30px; }
-        .video-item {
-            background: rgba(22,33,62,0.85); padding: 12px; margin: 8px 0;
-            border-radius: 12px; display: flex; justify-content: space-between; align-items: center;
+        .back-link { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+        .section {
+            background: var(--card-bg); backdrop-filter: blur(12px);
+            border-radius: 16px; padding: 20px; margin: 20px 0;
         }
-        .btn { background: var(--accent); color: white; border: none; padding: 6px 16px; border-radius: 15px; cursor: pointer; }
+        .section h3 { margin: 0 0 16px; }
+        .avatar-container { text-align: center; }
+        .avatar-container img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; }
+        input, button, select {
+            padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.35); color: white; font-size: 0.95rem; margin: 6px 0; width: 100%;
+            box-sizing: border-box;
+        }
+        input::placeholder { color: #888; }
+        button {
+            background: var(--accent); color: white; border: none; cursor: pointer; font-weight: 600; transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.02); }
+        .btn-secondary { background: rgba(255,255,255,0.15); }
+        .msg { font-size: 0.85rem; margin-top: 6px; }
+        .flex-row { display: flex; gap: 10px; }
+        .flex-row input { flex: 1; }
+        .hidden { display: none; }
     </style>
+    <link rel="manifest" href="/manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js');
+  }
+</script>
 </head>
 <body>
     <a href="/L0Ks.html" class="back-link">← 返回首页</a>
-    <h1>👤 <span id="profileUsername"></span> 的个人中心</h1>
-    
-    <h2>📹 我上传的视频</h2>
-    <div id="myVideos"></div>
+    <h1>👤 个人中心</h1>
+
+    <!-- 头像区域 -->
+    <div class="section avatar-container">
+        <img id="avatarImg" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%238b5cf6'/%3E%3Ctext x='50' y='55' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='40' font-family='sans-serif'%3E👤%3C/text%3E%3C/svg%3E" alt="头像">
+        <div>
+            <input type="file" id="avatarFile" accept="image/*" class="hidden">
+            <button onclick="document.getElementById('avatarFile').click()">更换头像</button>
+        </div>
+    </div>
+
+    <!-- 昵称区域 -->
+    <div class="section">
+        <h3>✏️ 修改昵称</h3>
+        <div class="flex-row">
+            <input type="text" id="nicknameInput" placeholder="新昵称">
+            <button onclick="updateNickname()">保存</button>
+        </div>
+        <div class="msg" id="nicknameMsg"></div>
+    </div>
+
+    <!-- 密码修改 -->
+    <div class="section">
+        <h3>🔐 修改密码</h3>
+        <input type="password" id="oldPassword" placeholder="旧密码">
+        <input type="password" id="newPassword" placeholder="新密码">
+        <button onclick="updatePassword()">修改密码</button>
+        <div class="msg" id="passwordMsg"></div>
+    </div>
+
+    <!-- 我的视频列表 -->
+    <div class="section">
+        <h3>📹 我上传的视频</h3>
+        <div id="myVideos"></div>
+    </div>
 
     <script>
-        async function loadProfile() {
+        // ========== 获取 CSRF Token ==========
+        function getCsrfToken() {
+            var match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+            return match ? match[1] : '';
+        }
+
+        // ========== 页面初始化 ==========
+        async function init() {
             var userResp = await fetch('/api/user');
             var userData = await userResp.json();
             if (!userData.username) {
                 document.body.innerHTML = '<h2>请先登录</h2><a href="/L0Ks.html">去登录</a>';
                 return;
             }
-            document.getElementById('profileUsername').textContent = userData.username;
+            // 加载详细资料
+            var profileResp = await fetch('/api/profile');
+            var profile = await profileResp.json();
+            if (profile.avatar) {
+                document.getElementById('avatarImg').src = profile.avatar;
+            }
+            document.getElementById('nicknameInput').value = profile.nickname || '';
+            loadMyVideos(userData.username);
+        }
 
+        // ========== 加载我上传的视频 ==========
+        async function loadMyVideos(username) {
             var videosResp = await fetch('/api/videos');
             var videos = await videosResp.json();
-            var myVideos = videos.filter(v => v.uploaded_by === userData.username);
+            var myVideos = videos.filter(v => v.uploaded_by === username);
             var container = document.getElementById('myVideos');
             if (myVideos.length === 0) {
                 container.innerHTML = '<p>你还没有上传过视频</p>';
                 return;
             }
-            myVideos.forEach(function(v) {
-                var div = document.createElement('div');
-                div.className = 'video-item';
-                div.innerHTML = '<span>' + v.title + '</span>' +
-                    '<button class="btn" onclick="deleteMyVideo(' + v.id + ')">删除</button>';
-                container.appendChild(div);
-            });
+            container.innerHTML = myVideos.map(v =>
+                `<div style="background:rgba(0,0,0,0.3); padding:10px; margin:8px 0; border-radius:8px; display:flex; justify-content:space-between;">
+                    <span>${v.title}</span>
+                    <button style="width:auto; padding:4px 12px;" onclick="deleteMyVideo(${v.id})">删除</button>
+                </div>`
+            ).join('');
         }
 
+        // ========== 删除视频 ==========
         async function deleteMyVideo(id) {
             if (!confirm('确定删除吗？')) return;
-            var csrfToken = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/)[1];
             var resp = await fetch('/api/videos/' + id + '/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ _csrf: csrfToken }).toString()
+                body: new URLSearchParams({ _csrf: getCsrfToken() }).toString()
             });
-            if (resp.ok) { loadProfile(); }
-            else { alert('删除失败'); }
+            if (resp.ok) {
+                init();
+            } else {
+                alert('删除失败');
+            }
         }
 
-        loadProfile();
+        // ========== 更新昵称 ==========
+        async function updateNickname() {
+            var nickname = document.getElementById('nicknameInput').value;
+            var resp = await fetch('/api/profile/nickname', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ nickname: nickname, _csrf: getCsrfToken() }).toString()
+            });
+            document.getElementById('nicknameMsg').textContent = await resp.text();
+        }
+
+        // ========== 上传头像 ==========
+        document.getElementById('avatarFile').addEventListener('change', async function() {
+            var file = this.files[0];
+            if (!file) return;
+            var formData = new FormData();
+            formData.append('avatar', file);
+            formData.append('_csrf', getCsrfToken());
+            var resp = await fetch('/api/profile/avatar', { method: 'POST', body: formData });
+            if (resp.ok) {
+                // 刷新头像
+                var profileResp = await fetch('/api/profile');
+                var profile = await profileResp.json();
+                if (profile.avatar) {
+                    document.getElementById('avatarImg').src = profile.avatar + '?' + Date.now();
+                }
+            }
+            alert(await resp.text());
+        });
+
+        // ========== 修改密码 ==========
+        async function updatePassword() {
+            var oldPwd = document.getElementById('oldPassword').value;
+            var newPwd = document.getElementById('newPassword').value;
+            var resp = await fetch('/api/profile/password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ oldPassword: oldPwd, newPassword: newPwd, _csrf: getCsrfToken() }).toString()
+            });
+            document.getElementById('passwordMsg').textContent = await resp.text();
+        }
+
+        init();
     </script>
 </body>
 </html>
