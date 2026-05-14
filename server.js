@@ -1,27 +1,26 @@
-// ==================== 1. 引入依赖 ====================
-const express = require('express');           // Web 框架
-const bcrypt = require('bcrypt');             // 密码加密
-const cookieParser = require('cookie-parser'); // 解析 Cookie
-const { Pool } = require('pg');              // PostgreSQL 数据库
-const multer = require('multer');            // 处理文件上传
-const cloudinary = require('cloudinary').v2; // 云存储
-const { v4: uuidv4 } = require('uuid');     // 生成唯一ID
-const helmet = require('helmet');            // 安全防护
+const express = require('express');
+const bcrypt = require('bcrypt');
+const cookieParser = require('cookie-parser');
+const { Pool } = require('pg');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { v4: uuidv4 } = require('uuid');
+const helmet = require('helmet');
 
 const app = express();
 
-// ==================== 2. 安全防护 ====================
+// ---- 安全防护 ----
 app.use(helmet({
-  contentSecurityPolicy: false,      // 我们自定义 CSP
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
 }));
 
-// ==================== 3. Cloudinary 凭据 ====================
+// ---- Cloudinary 凭据 ----
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
-// ==================== 4. 数据库连接 ====================
+// ---- 数据库 ----
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -29,7 +28,6 @@ const pool = new Pool({
 
 (async () => {
   try {
-    // 创建表
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -44,38 +42,37 @@ const pool = new Pool({
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    // 动态追加列
     await pool.query('ALTER TABLE videos ADD COLUMN IF NOT EXISTS thumbnail TEXT;');
     await pool.query('ALTER TABLE videos ADD COLUMN IF NOT EXISTS public_id TEXT;');
     await pool.query("ALTER TABLE videos ADD COLUMN IF NOT EXISTS category TEXT DEFAULT '其他';");
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname TEXT;');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;');
-    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;');
-    console.log('数据库已连接');
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();');
+    console.log('PostgreSQL 数据库已连接');
   } catch (err) {
     console.error('数据库初始化失败:', err.message);
   }
 })();
 
-// ==================== 5. 静态文件托管 ====================
+// ---- 静态文件 ----
 app.use(express.static('public'));
 
-// ==================== 6. CSP 响应头 ====================
+// ---- CSP ----
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; media-src 'self'; img-src 'self' data: https:; connect-src 'self' https://www.google-analytics.com;");
   next();
 });
 
-// ==================== 7. multer 配置 ====================
+// ---- multer ----
 const upload = multer({ storage: multer.memoryStorage() });
 const uploadAvatar = multer({ storage: multer.memoryStorage() });
 
-// ==================== 8. 中间件 ====================
+// ---- 中间件 ----
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-// ==================== 9. CSRF 保护 ====================
+// ---- CSRF ----
 function generateCsrfToken() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
@@ -89,6 +86,7 @@ app.use((req, res, next) => {
   res.locals.csrfToken = req.cookies.csrf_token || '';
   next();
 });
+
 function csrfProtection(req, res, next) {
   const cookieToken = req.cookies.csrf_token;
   const bodyToken = req.body._csrf;
@@ -97,7 +95,8 @@ function csrfProtection(req, res, next) {
   }
   next();
 }
-// ==================== 管理员验证中间件 ====================
+
+// ---- 管理员中间件 ----
 async function adminRequired(req, res, next) {
   if (!req.cookies.user) return res.status(401).send('请先登录');
   try {
@@ -112,10 +111,11 @@ async function adminRequired(req, res, next) {
   }
 }
 
-// ==================== 10. 首页重定向 ====================
+// ======================== 路由 ========================
+
 app.get('/', (req, res) => res.redirect('/L0Ks.html'));
 
-// ==================== 11. 用户系统 ====================
+// --- 注册 ---
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.send('用户名和密码不能为空');
@@ -133,6 +133,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
+// --- 登录 ---
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.send('用户名或密码不能为空');
@@ -153,11 +154,12 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// --- 获取当前用户 ---
 app.get('/api/user', (req, res) => {
   res.json({ username: req.cookies.user || null });
 });
 
-// ==================== 12. 用户资料 ====================
+// --- 用户资料 ---
 app.get('/api/profile', async (req, res) => {
   if (!req.cookies.user) return res.status(401).json({ error: '未登录' });
   try {
@@ -229,7 +231,7 @@ app.post('/api/profile/password', csrfProtection, async (req, res) => {
   }
 });
 
-// ==================== 13. 视频管理 ====================
+// --- 视频列表 ---
 app.get('/api/videos', async (req, res) => {
   try {
     const { category } = req.query;
@@ -248,6 +250,7 @@ app.get('/api/videos', async (req, res) => {
   }
 });
 
+// --- 视频详情 ---
 app.get('/api/videos/:id', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM videos WHERE id = $1', [req.params.id]);
@@ -259,6 +262,7 @@ app.get('/api/videos/:id', async (req, res) => {
   }
 });
 
+// --- 删除视频 ---
 app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
   if (!req.cookies.user) return res.status(401).send('请先登录');
   const { id } = req.params;
@@ -288,71 +292,8 @@ app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
     res.status(500).send('删除失败');
   }
 });
-// ==================== 临时：将当前登录用户设为管理员 ====================
-app.get('/make-me-admin', async (req, res) => {
-  if (!req.cookies.user) return res.send('请先登录');
-  try {
-    await pool.query('UPDATE users SET is_admin = true WHERE username = $1', [req.cookies.user]);
-    res.send('管理员权限已开启！你现在可以访问 /admin.html 了。');
-  } catch (err) {
-    console.error('设置管理员失败:', err.message);
-    res.send('设置失败，请重试');
-  }
-});
-// ==================== 管理后台 API ====================
 
-// 获取所有用户（管理员专属）
-app.get('/api/admin/users', adminRequired, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT id, username, nickname, avatar, is_admin, created_at FROM users ORDER BY created_at DESC');
-    res.json(result.rows);
-  } catch (err) {
-    console.error('获取用户列表失败:', err.message);
-    res.status(500).json({ error: '获取用户列表失败' });
-  }
-});
-
-// 获取所有视频（管理员专属）
-app.get('/api/admin/videos', adminRequired, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM videos ORDER BY created_at DESC');
-    res.json(result.rows);
-  } catch (err) {
-    console.error('获取视频列表失败:', err.message);
-    res.status(500).json({ error: '获取视频列表失败' });
-  }
-});
-
-// 强制删除视频（管理员专属）
-app.delete('/api/admin/videos/:id', adminRequired, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query('SELECT * FROM videos WHERE id = $1', [id]);
-    const video = result.rows[0];
-    if (!video) return res.status(404).send('视频不存在');
-
-    if (video.public_id) {
-      try {
-        await cloudinary.uploader.destroy(video.public_id, {
-          resource_type: 'video',
-          api_key: CLOUDINARY_API_KEY,
-          api_secret: CLOUDINARY_API_SECRET,
-          cloud_name: CLOUDINARY_CLOUD_NAME,
-        });
-        console.log('管理员已删除 Cloudinary 视频:', video.public_id);
-      } catch (cloudErr) {
-        console.error('Cloudinary 删除失败:', cloudErr);
-      }
-    }
-
-    await pool.query('DELETE FROM videos WHERE id = $1', [id]);
-    res.send('删除成功');
-  } catch (err) {
-    console.error('管理员删除失败:', err.message);
-    res.status(500).send('删除失败');
-  }
-});
-// --- 上传视频 ---
+// --- 上传视频 (含显式凭据) ---
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   const cookieToken = req.cookies.csrf_token;
   const bodyToken = req.body._csrf;
@@ -374,7 +315,7 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
       folder: 'loks-videos',
       transformation: [{ quality: 'auto' }],
       public_id: uuidv4(),
-      api_key: CLOUDINARY_API_KEY,
+      api_key: CLOUDINARY_API_KEY,       // 显式传入凭据
       api_secret: CLOUDINARY_API_SECRET,
       cloud_name: CLOUDINARY_CLOUD_NAME,
       chunk_size: 6000000,
@@ -397,37 +338,56 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
   }
 });
 
-    const videoUrl = uploaded.secure_url;
-    const thumbnailUrl = uploaded.eager[0].secure_url;
-
-    await pool.query(
-      'INSERT INTO videos (title, filename, thumbnail, public_id, category, uploaded_by) VALUES ($1, $2, $3, $4, $5, $6)',
-      [title, videoUrl, thumbnailUrl, uploaded.public_id, safeCategory, req.cookies.user]
-    );
-
-    res.redirect('/L0Ks.html');
+// --- 管理员 API ---
+app.get('/api/admin/users', adminRequired, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, username, nickname, avatar, is_admin, created_at FROM users ORDER BY created_at DESC');
+    res.json(result.rows);
   } catch (err) {
-    console.error('上传失败:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-    res.send('上传失败，请稍后重试');
+    console.error('获取用户列表失败:', err.message);
+    res.status(500).json({ error: '获取用户列表失败' });
   }
 });
 
-    const videoUrl = uploaded.secure_url;
-    const thumbnailUrl = uploaded.eager[0].secure_url;
-
-    await pool.query(
-      'INSERT INTO videos (title, filename, thumbnail, public_id, category, uploaded_by) VALUES ($1, $2, $3, $4, $5, $6)',
-      [title, videoUrl, thumbnailUrl, uploaded.public_id, safeCategory, req.cookies.user]
-    );
-
-    res.redirect('/L0Ks.html');
+app.get('/api/admin/videos', adminRequired, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM videos ORDER BY created_at DESC');
+    res.json(result.rows);
   } catch (err) {
-    console.error('上传失败:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-    res.send('上传失败，请稍后重试');
+    console.error('获取视频列表失败:', err.message);
+    res.status(500).json({ error: '获取视频列表失败' });
   }
 });
 
-// ==================== 14. 全局错误捕获 ====================
+app.delete('/api/admin/videos/:id', adminRequired, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM videos WHERE id = $1', [id]);
+    const video = result.rows[0];
+    if (!video) return res.status(404).send('视频不存在');
+
+    if (video.public_id) {
+      try {
+        await cloudinary.uploader.destroy(video.public_id, {
+          resource_type: 'video',
+          api_key: CLOUDINARY_API_KEY,
+          api_secret: CLOUDINARY_API_SECRET,
+          cloud_name: CLOUDINARY_CLOUD_NAME,
+        });
+      } catch (cloudErr) {
+        console.error('Cloudinary 删除失败:', cloudErr);
+      }
+    }
+
+    await pool.query('DELETE FROM videos WHERE id = $1', [id]);
+    res.send('删除成功');
+  } catch (err) {
+    console.error('管理员删除失败:', err.message);
+    res.status(500).send('删除失败');
+  }
+});
+
+// ---- 全局错误捕获 ----
 process.on('uncaughtException', (err) => {
   console.error('未捕获的异常:', err.message, err.stack);
 });
@@ -435,7 +395,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('未处理的 Promise 拒绝:', reason);
 });
 
-// ==================== 15. 启动服务器 ====================
+// ---- 启动 ----
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log('私人番剧站已启动 → 端口 ' + port);
