@@ -16,9 +16,9 @@ app.use(helmet({
 }));
 
 // ---- Cloudinary 凭据 ----
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
-const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
+const CLOUDINARY_CLOUD_NAME = 'dyh7g2qu5';
+const CLOUDINARY_API_KEY = '923574445472679';
+const CLOUDINARY_API_SECRET = 'yUYJYLx-hI0kvYjTVfjG2rLOpYct';
 
 // ---- 数据库 ----
 const pool = new Pool({
