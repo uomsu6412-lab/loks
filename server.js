@@ -49,6 +49,16 @@ const pool = new Pool({
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();');
+    // 创建评论表
+    await pool.query(`
+    CREATE TABLE IF NOT EXISTS comments (
+    id SERIAL PRIMARY KEY,
+    video_id INTEGER NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    username TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+`);
     console.log('PostgreSQL 数据库已连接');
   } catch (err) {
     console.error('数据库初始化失败:', err.message);
@@ -294,6 +304,73 @@ app.get('/api/videos/:id', async (req, res) => {
   } catch (err) {
     console.error('获取视频详情失败:', err.message);
     res.status(500).send('服务器错误');
+  }
+});
+// ==================== 评论 API ====================
+
+// 获取评论列表
+app.get('/api/videos/:id/comments', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, username, content, created_at FROM comments WHERE video_id = $1 ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('获取评论失败:', err.message);
+    res.json([]);
+  }
+});
+
+// 提交评论
+app.post('/api/videos/:id/comments', csrfProtection, async (req, res) => {
+  if (!req.cookies.user) return res.status(401).send('请先登录');
+  const { content } = req.body;
+  if (!content || content.trim().length === 0) return res.status(400).send('评论内容不能为空');
+  if (content.length > 500) return res.status(400).send('评论不能超过500字');
+
+  try {
+    await pool.query(
+      'INSERT INTO comments (video_id, username, content) VALUES ($1, $2, $3)',
+      [req.params.id, req.cookies.user, content.trim()]
+    );
+    res.send('评论成功');
+  } catch (err) {
+    console.error('提交评论失败:', err.message);
+    res.status(500).send('评论失败，请稍后重试');
+  }
+});
+
+// 删除评论（作者本人或管理员）
+app.delete('/api/videos/:id/comments/:commentId', async (req, res) => {
+  if (!req.cookies.user) return res.status(401).send('请先登录');
+  const { commentId } = req.params;
+
+  try {
+    // 查询评论信息
+    const commentResult = await pool.query('SELECT * FROM comments WHERE id = $1', [commentId]);
+    if (commentResult.rows.length === 0) return res.status(404).send('评论不存在');
+
+    const comment = commentResult.rows[0];
+
+    // 检查是否为评论作者或管理员
+    const isAuthor = (comment.username === req.cookies.user);
+    let isAdmin = false;
+
+    if (!isAuthor) {
+      const adminResult = await pool.query('SELECT is_admin FROM users WHERE username = $1', [req.cookies.user]);
+      isAdmin = adminResult.rows.length > 0 && adminResult.rows[0].is_admin;
+    }
+
+    if (!isAuthor && !isAdmin) {
+      return res.status(403).send('无权删除此评论');
+    }
+
+    await pool.query('DELETE FROM comments WHERE id = $1', [commentId]);
+    res.send('删除成功');
+  } catch (err) {
+    console.error('删除评论失败:', err.message);
+    res.status(500).send('删除失败');
   }
 });
 

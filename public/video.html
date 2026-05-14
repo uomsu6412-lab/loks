@@ -7,15 +7,52 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
     <link rel="manifest" href="/manifest.json">
     <style>
-        :root { --bg-start: #0a0a1a; --bg-end: #1a1a3e; --accent: #e94560; --text: #e0e0e0; }
+        :root { --bg-start: #0a0a1a; --bg-end: #1a1a3e; --accent: #e94560; --text: #e0e0e0; --card-bg: rgba(22,33,62,0.85); }
         body { margin: 0; padding: 20px; font-family: 'Segoe UI','微软雅黑',sans-serif; background: linear-gradient(135deg, var(--bg-start), var(--bg-end)); color: var(--text); min-height: 100vh; }
         .back-link { display: inline-block; margin-bottom: 20px; color: var(--accent); text-decoration: none; }
         .video-container { max-width: 900px; margin: 0 auto; }
         video { width: 100%; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-        h1 { margin: 16px 0 8px; }
-        .meta { color: #a0a0b0; font-size: 0.9rem; }
+        h1 { margin: 16px 0 8px; font-size: 1.8rem; }
+        .meta { color: #a0a0b0; font-size: 0.9rem; margin-bottom: 20px; }
         .meta span { margin-right: 16px; }
         .progress-info { color: var(--accent); font-size: 0.9rem; margin: 10px 0; }
+
+        /* 评论区 */
+        .comments-section {
+            max-width: 900px;
+            margin: 30px auto 0;
+            padding: 20px 0;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .comments-section h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: 20px; }
+        .comment-form textarea {
+            width: 100%; padding: 12px 14px; border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.3);
+            color: white; font-size: 0.95rem; resize: vertical; font-family: inherit; outline: none;
+        }
+        .comment-form textarea::placeholder { color: #6a6a7a; }
+        .comment-item {
+            background: rgba(15, 15, 35, 0.55); border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 16px; padding: 14px; margin-bottom: 12px;
+        }
+        .comment-item .comment-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.85rem;
+        }
+        .comment-item .comment-username { color: #ff4d6a; font-weight: 600; }
+        .comment-item .comment-time { color: #8a8a9a; }
+        .comment-item .comment-content { color: #e0e0f0; font-size: 0.95rem; line-height: 1.5; }
+        .delete-comment-btn {
+            background: none; border: none; color: #8a8a9a; cursor: pointer; font-size: 0.85rem;
+            padding: 2px 8px; border-radius: 12px; transition: color 0.2s;
+        }
+        .delete-comment-btn:hover { color: var(--accent); background: rgba(255,77,106,0.1); }
+
+        .btn-primary {
+            background: var(--accent); color: white; border: none; padding: 8px 20px;
+            border-radius: 24px; font-weight: 600; cursor: pointer; transition: transform 0.2s;
+        }
+        .btn-primary:hover { transform: scale(1.02); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -31,6 +68,24 @@
         </div>
     </div>
 
+    <!-- 评论区 -->
+    <div class="comments-section">
+        <h2>💬 评论</h2>
+
+        <div class="comment-form" id="commentForm" style="display: none;">
+            <textarea id="commentContent" placeholder="写下你的想法..." maxlength="500" rows="3"></textarea>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                <span id="commentCharCount" style="font-size: 0.8rem; color: #8a8a9a;">0/500</span>
+                <button id="submitComment" class="btn-primary" style="width: auto;">发表评论</button>
+            </div>
+            <div id="commentMsg" style="margin-top: 8px; font-size: 0.85rem;"></div>
+        </div>
+
+        <div class="comments-list" id="commentsList">
+            <p style="color: #8a8a9a; text-align: center; padding: 20px;">加载中...</p>
+        </div>
+    </div>
+
     <script>
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
@@ -43,50 +98,126 @@
                 .then(res => res.json())
                 .then(video => {
                     document.title = video.title + ' - L0Ks';
-                    videoEl.src = video.filename.replace('/upload/', '/upload/f_auto,q_auto/');
+                    videoEl.src = video.filename.replace('/upload/', '/upload/f_mp4,vc_h264,ac_aac,q_auto/');
                     document.getElementById('videoTitle').textContent = video.title;
                     document.getElementById('videoUploader').textContent = '上传者：' + video.uploaded_by;
                     document.getElementById('videoCategory').textContent = '分类：' + (video.category || '其他');
                     document.getElementById('videoDate').textContent = '上传时间：' + new Date(video.created_at).toLocaleString();
 
-                    // ========== 断点续播逻辑 ==========
+                    // 断点续播
                     const storageKey = 'l0ks_video_' + id;
                     const savedTime = localStorage.getItem(storageKey);
-
-                    // 视频元数据加载完成后，恢复进度
                     videoEl.addEventListener('loadedmetadata', function() {
                         if (savedTime && parseFloat(savedTime) > 5) {
                             videoEl.currentTime = parseFloat(savedTime);
                             const mins = Math.floor(savedTime / 60);
                             const secs = Math.floor(savedTime % 60);
-                            document.getElementById('progressInfo').textContent = `📍 已恢复上次播放进度：${mins}分${secs}秒`;
+                            document.getElementById('progressInfo').textContent = `📍 已恢复上次进度：${mins}分${secs}秒`;
                         }
                     });
-
-                    // 每 10 秒自动保存进度
-                    setInterval(function() {
+                    setInterval(() => {
                         if (!videoEl.paused && videoEl.currentTime > 0) {
                             localStorage.setItem(storageKey, videoEl.currentTime);
                         }
                     }, 10000);
-
-                    // 暂停时也保存一次
-                    videoEl.addEventListener('pause', function() {
-                        if (videoEl.currentTime > 0) {
-                            localStorage.setItem(storageKey, videoEl.currentTime);
-                        }
+                    videoEl.addEventListener('pause', () => {
+                        if (videoEl.currentTime > 0) localStorage.setItem(storageKey, videoEl.currentTime);
                     });
-
-                    // 视频播放结束时清除进度
-                    videoEl.addEventListener('ended', function() {
+                    videoEl.addEventListener('ended', () => {
                         localStorage.removeItem(storageKey);
                         document.getElementById('progressInfo').textContent = '✅ 已看完';
                     });
                 })
-                .catch(() => {
-                    document.body.innerHTML = '<h2>视频加载失败</h2>';
-                });
+                .catch(() => { document.body.innerHTML = '<h2>视频加载失败</h2>'; });
         }
+
+        // ========== 评论功能 ==========
+        async function loadComments() {
+            const container = document.getElementById('commentsList');
+            try {
+                const resp = await fetch('/api/videos/' + id + '/comments');
+                const comments = await resp.json();
+                if (comments.length === 0) {
+                    container.innerHTML = '<p style="color: #8a8a9a; text-align: center; padding: 20px;">暂无评论，来说两句吧</p>';
+                    return;
+                }
+
+                const currentUserResp = await fetch('/api/user');
+                const currentUser = (await currentUserResp.json()).username;
+                const isAdminResp = await fetch('/api/profile');
+                const isAdmin = (await isAdminResp.json()).is_admin;
+
+                container.innerHTML = comments.map(c => {
+                    const canDelete = (currentUser === c.username) || isAdmin;
+                    const deleteBtn = canDelete
+                        ? `<button class="delete-comment-btn" onclick="deleteComment(${c.id})" title="删除">🗑️</button>`
+                        : '';
+                    return `
+                        <div class="comment-item">
+                            <div class="comment-header">
+                                <span class="comment-username">${c.username}</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="comment-time">${new Date(c.created_at).toLocaleString()}</span>
+                                    ${deleteBtn}
+                                </div>
+                            </div>
+                            <div class="comment-content">${c.content}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                container.innerHTML = '<p style="color: #8a8a9a; text-align: center;">评论加载失败</p>';
+            }
+        }
+
+        async function checkCommentAccess() {
+            const resp = await fetch('/api/user');
+            const data = await resp.json();
+            document.getElementById('commentForm').style.display = data.username ? 'block' : 'none';
+        }
+
+        document.getElementById('commentContent').addEventListener('input', function() {
+            document.getElementById('commentCharCount').textContent = this.value.length + '/500';
+        });
+
+        document.getElementById('submitComment').addEventListener('click', async function() {
+            const content = document.getElementById('commentContent').value.trim();
+            if (!content) return;
+
+            const csrfToken = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/)[1];
+            this.disabled = true;
+            this.textContent = '提交中...';
+
+            const resp = await fetch('/api/videos/' + id + '/comments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ content, _csrf: csrfToken }).toString()
+            });
+
+            if (resp.ok) {
+                document.getElementById('commentContent').value = '';
+                document.getElementById('commentCharCount').textContent = '0/500';
+                loadComments();
+            } else {
+                document.getElementById('commentMsg').textContent = await resp.text();
+            }
+            this.disabled = false;
+            this.textContent = '发表评论';
+        });
+
+        async function deleteComment(commentId) {
+            if (!confirm('确定删除这条评论吗？')) return;
+            const resp = await fetch(`/api/videos/${id}/comments/${commentId}`, { method: 'DELETE' });
+            if (resp.ok) {
+                loadComments();
+            } else {
+                alert('删除失败：' + await resp.text());
+            }
+        }
+
+        // 初始化
+        loadComments();
+        checkCommentAccess();
     </script>
 </body>
 </html>
