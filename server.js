@@ -139,32 +139,47 @@ app.get('/api/videos', async (req, res) => {
     res.json([]);
   }
 });
-   // 删除视频（仅上传者本人可删）
-   app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
-   if (!req.cookies.user) return res.status(401).send('请先登录');
-   const { id } = req.params;
-   try {
+// 删除视频（仅上传者本人可删）
+app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
+  if (!req.cookies.user) return res.status(401).send('请先登录');
+  const { id } = req.params;
+  try {
     const result = await pool.query('SELECT * FROM videos WHERE id = $1', [id]);
     const video = result.rows[0];
     if (!video) return res.status(404).send('视频不存在');
     if (video.uploaded_by !== req.cookies.user) {
       return res.status(403).send('无权删除他人视频');
     }
-    // 从 Cloudinary 删除
-    await cloudinary.uploader.destroy(video.public_id, {
-      resource_type: 'video',
-      api_key: CLOUDINARY_API_KEY,
-      api_secret: CLOUDINARY_API_SECRET,
-      cloud_name: CLOUDINARY_CLOUD_NAME,
-    });
+
+    // 从 Cloudinary 删除（如果有 public_id）
+    if (video.public_id) {
+      try {
+        await cloudinary.uploader.destroy(video.public_id, {
+          resource_type: 'video',
+          api_key: CLOUDINARY_API_KEY,
+          api_secret: CLOUDINARY_API_SECRET,
+          cloud_name: CLOUDINARY_CLOUD_NAME,
+        });
+        console.log('Cloudinary 删除成功:', video.public_id);
+      } catch (cloudErr) {
+        console.error('Cloudinary 删除失败:', cloudErr);
+        // 继续删除数据库记录，避免留下孤儿记录
+      }
+    } else {
+      console.warn('视频缺少 public_id，跳过 Cloudinary 删除:', id);
+    }
+
     // 从数据库删除
     await pool.query('DELETE FROM videos WHERE id = $1', [id]);
     res.send('删除成功');
-   } catch (err) {
-    console.error('删除失败:', err.message);
+  } catch (err) {
+    console.error('删除失败 - 完整错误:', err);
+    console.error('删除失败 - message:', err.message);
+    console.error('删除失败 - stack:', err.stack);
+    if (err.error) console.error('删除失败 - Cloudinary 原始错误:', err.error);
     res.status(500).send('删除失败');
-   }
-   });
+  }
+});
 
 // 上传视频（base64 直传，硬编码凭据）
 app.post('/api/upload', upload.single('video'), async (req, res) => {
