@@ -9,12 +9,10 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
-// ---- Cloudinary 硬编码配置（测试用） ----
-cloudinary.config({
-  cloud_name: 'dyh7g2qu5',
-  api_key: '923574445472679',
-  api_secret: 'yUYJYLx-hI0kvYjTVfjG2rLOpYc'
-});
+// ---- Cloudinary 凭据（从环境变量读取，但不依赖全局配置） ----
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
 // ---- 数据库连接（PostgreSQL） ----
 const pool = new Pool({
@@ -159,8 +157,10 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
       folder: 'loks-videos',
       transformation: [{ quality: 'auto' }],
       public_id: uuidv4(),
+      api_key: CLOUDINARY_API_KEY,        // ← 新增
+      api_secret: CLOUDINARY_API_SECRET,  // ← 新增
+      cloud_name: CLOUDINARY_CLOUD_NAME,  // ← 新增
     });
-
     const videoUrl = uploaded.secure_url;
 
     await pool.query(
