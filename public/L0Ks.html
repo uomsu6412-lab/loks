@@ -8,6 +8,8 @@
     <title>🎬 L0Ks · 私人映像</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
     <link rel="manifest" href="/manifest.json">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
     <style>
         :root {
             --bg-deep: #05050f;
@@ -52,7 +54,6 @@
             100% { transform: translateY(-10vh) scale(1); opacity: 0; }
         }
 
-        /* ========== Toast系统 ========== */
         .toast-container { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; }
         .toast {
             background: rgba(20, 20, 40, 0.85);
@@ -77,7 +78,6 @@
         .toast.warning { border-left: 3px solid #f0a500; }
         @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
 
-        /* ========== 骨架屏 ========== */
         .skeleton-card {
             background: var(--bg-card); border-radius: var(--radius-card); padding: 16px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.3); animation: pulse 1.8s infinite;
@@ -91,7 +91,6 @@
         .skeleton-text.short { width: 40%; }
         @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
 
-        /* ========== 导航栏 ========== */
         .navbar {
             position: sticky; top: 0; z-index: 100;
             background: var(--nav-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
@@ -142,7 +141,6 @@
         .btn-upload-nav { background: linear-gradient(135deg, #00c9a7, #009b82); border: none; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-        /* ========== 主内容区 ========== */
         .main-content { position: relative; z-index: 1; padding: 24px 24px calc(60px + var(--safe-bottom)); }
         .section-title { font-size: 1.5rem; font-weight: 700; margin: 0 0 20px; color: var(--text-primary); letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
         .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
@@ -173,7 +171,6 @@
         }
         .card .delete-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
 
-        /* ========== 模态框 ========== */
         .modal {
             display: none; position: fixed; z-index: 200; left: 0; top: 0;
             width: 100%; height: 100%; background: rgba(0,0,0,0.7);
@@ -219,7 +216,16 @@
         .empty-state { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
         .empty-state svg { width: 80px; height: 80px; margin-bottom: 20px; opacity: 0.4; }
 
-        /* ========== 手机端 ========== */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 30px 0 20px; flex-wrap: wrap; z-index: 1; position: relative; }
+        .page-btn {
+            padding: 8px 18px; border-radius: 24px;
+            background: rgba(255,255,255,0.08); color: white;
+            border: 1px solid rgba(255,255,255,0.1); cursor: pointer;
+            font-size: 0.85rem; font-weight: 600; transition: all 0.2s;
+        }
+        .page-btn:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
+        .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
         @media (max-width: 768px) {
             .navbar { padding: 8px 12px; gap: 6px; }
             .navbar-left { gap: 6px; }
@@ -284,6 +290,12 @@
             <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-text"></div><div class="skeleton-text short"></div></div>
             <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-text"></div><div class="skeleton-text short"></div></div>
         </div>
+        <!-- 翻页栏 -->
+        <div class="pagination" id="pagination">
+            <button class="page-btn" id="prevPage" onclick="changePage(currentPage - 1)" disabled>上一页</button>
+            <span id="pageInfo" style="color: var(--text-secondary); font-size: 0.9rem; padding: 0 12px;"></span>
+            <button class="page-btn" id="nextPage" onclick="changePage(currentPage + 1)" disabled>下一页</button>
+        </div>
     </div>
 
     <div class="modal" id="authModal">
@@ -343,7 +355,6 @@
     </div>
 
     <script>
-        // ========== Toast系统 ==========
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -354,7 +365,6 @@
             setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.2s'; setTimeout(() => toast.remove(), 200); }, 2800);
         }
 
-        // ========== 粒子动画 ==========
         (function() {
             const container = document.getElementById('particles');
             for (let i = 0; i < 35; i++) {
@@ -367,7 +377,6 @@
             }
         })();
 
-        // ========== 工具函数 ==========
         function getCsrfToken() {
             var match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
             return match ? match[1] : '';
@@ -379,7 +388,6 @@
             document.getElementById('csrfInputUpload').value = token;
         }
 
-        // ========== 模态框控制 ==========
         const authModal = document.getElementById('authModal');
         const uploadModal = document.getElementById('uploadModal');
         function openAuthModal() { authModal.classList.add('open'); fillCsrf(); }
@@ -391,7 +399,6 @@
             if (e.target === uploadModal) closeUploadModal();
         });
 
-        // ========== 选项卡切换 ==========
         document.querySelectorAll('.tabs span').forEach(tab => {
             tab.addEventListener('click', function() {
                 document.querySelectorAll('.tabs span').forEach(t => t.classList.remove('active'));
@@ -404,10 +411,8 @@
             });
         });
 
-        // ========== 页面初始化 ==========
         window.addEventListener('DOMContentLoaded', function() { fillCsrf(); checkLogin(); loadVideos(); loadContinueWatching(); });
 
-        // ========== 检查登录状态 ==========
         async function checkLogin() {
             var response = await fetch('/api/user');
             var data = await response.json();
@@ -447,14 +452,21 @@
             }
         }
 
-        // ========== 加载视频列表 ==========
-        async function loadVideos(category) {
-            var url = '/api/videos';
-            if (category && category !== '全部') url += '?category=' + encodeURIComponent(category);
+        let currentPage = 1;
+        let currentCategory = '';
+
+        async function loadVideos(category, page = 1) {
+            currentCategory = category || '';
+            currentPage = page;
+            var url = '/api/videos?page=' + page + '&limit=12';
+            if (category && category !== '全部') url += '&category=' + encodeURIComponent(category);
+
             var response = await fetch(url);
-            var videos = await response.json();
+            var data = await response.json();
+            var videos = data.videos;
             var container = document.getElementById('videoContainer');
             container.innerHTML = '';
+
             if (videos.length === 0) {
                 container.innerHTML = `<div class="empty-state">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -462,24 +474,33 @@
                     </svg>
                     <p>这里还空无一物，静候你的分享。</p>
                 </div>`;
-                return;
-            }
-            videos.forEach(function(v) {
-                var card = document.createElement('div'); card.className = 'card';
-                var isOwner = (window.currentUser && v.uploaded_by === window.currentUser);
-                var deleteBtnHtml = isOwner ? '<button class="delete-btn">移除</button>' : '';
-                var optimizedUrl = v.filename.replace('/upload/', '/upload/f_mp4,vc_h264,ac_aac,q_auto/');
-                card.innerHTML = '<video controls playsinline x5-video-player-type="h5" x5-video-player-fullscreen="true" src="' + optimizedUrl + '" poster="' + (v.thumbnail || '') + '"></video>' +
-                                 '<h3>' + v.title + '</h3><div class="meta">' + v.uploaded_by + ' · ' + (v.category || '其他') + '</div>' + deleteBtnHtml;
-                card.addEventListener('click', function(e) {
-                    if (e.target.closest('.delete-btn')) { e.preventDefault(); e.stopPropagation(); requestDelete(v.id); }
-                    else { window.location.href = '/video.html?id=' + v.id; }
+            } else {
+                videos.forEach(function(v) {
+                    var card = document.createElement('div'); card.className = 'card';
+                    var isOwner = (window.currentUser && v.uploaded_by === window.currentUser);
+                    var deleteBtnHtml = isOwner ? '<button class="delete-btn">移除</button>' : '';
+                    var optimizedUrl = v.filename.replace('/upload/', '/upload/f_mp4,vc_h264,ac_aac,q_auto/');
+                    card.innerHTML = '<video controls playsinline x5-video-player-type="h5" x5-video-player-fullscreen="true" src="' + optimizedUrl + '" poster="' + (v.thumbnail || '') + '"></video>' +
+                                     '<h3>' + v.title + '</h3><div class="meta">' + v.uploaded_by + ' · ' + (v.category || '其他') + '</div>' + deleteBtnHtml;
+                    card.addEventListener('click', function(e) {
+                        if (e.target.closest('.delete-btn')) { e.preventDefault(); e.stopPropagation(); requestDelete(v.id); }
+                        else { window.location.href = '/video.html?id=' + v.id; }
+                    });
+                    container.appendChild(card);
                 });
-                container.appendChild(card);
-            });
+            }
+
+            document.getElementById('prevPage').disabled = (page <= 1);
+            document.getElementById('nextPage').disabled = (page >= data.totalPages);
+            document.getElementById('pageInfo').textContent = '第 ' + page + ' 页 / 共 ' + data.totalPages + ' 页（' + data.total + ' 部）';
         }
 
-        // ========== 继续观看列表 ==========
+        function changePage(page) {
+            if (page < 1) return;
+            loadVideos(currentCategory, page);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         function loadContinueWatching() {
             const container = document.getElementById('continueWatchingContainer');
             const section = document.getElementById('continueWatchingSection');
@@ -509,7 +530,6 @@
             });
         }
 
-        // ========== 删除视频（带确认） ==========
         function requestDelete(id) {
             if (confirm('确定要移除这部映像吗？此操作无法撤销。')) {
                 deleteVideo(id);
@@ -524,11 +544,9 @@
             else { showToast('移除失败', 'error'); }
         }
 
-        // ========== 搜索与分类 ==========
-        document.getElementById('searchBtn').addEventListener('click', () => loadVideos(document.getElementById('categoryFilter').value));
-        document.getElementById('categoryFilter').addEventListener('change', function() { loadVideos(this.value); });
+        document.getElementById('searchBtn').addEventListener('click', () => loadVideos(document.getElementById('categoryFilter').value, 1));
+        document.getElementById('categoryFilter').addEventListener('change', function() { loadVideos(this.value, 1); });
 
-        // ========== 登录（带按钮loading） ==========
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var btn = this.querySelector('button[type="submit"]');
@@ -544,7 +562,6 @@
             else { showToast(msg, 'error'); }
         });
 
-        // ========== 注册 ==========
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var btn = this.querySelector('button[type="submit"]');
@@ -557,15 +574,13 @@
             document.getElementById('registerMsg').textContent = msg;
             btn.disabled = false; btn.textContent = '注册';
             if (msg === '注册成功！') {
-             showToast('注册成功，欢迎加入');
-             closeAuthModal();
-             checkLogin();
-             loadVideos();
-    }
-             else { showToast(msg, 'error'); }
+                showToast('注册成功，欢迎加入');
+                closeAuthModal();
+                checkLogin();
+                loadVideos();
+            } else { showToast(msg, 'error'); }
         });
 
-        // ========== 上传（多文件，带loading） ==========
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var files = document.getElementById('videoFile').files;
@@ -579,15 +594,19 @@
                 var formData = new FormData();
                 formData.append('title', title ? title + ' (' + (i+1) + '/' + files.length + ')' : '视频 ' + (i+1));
                 formData.append('category', category);
-                formData.append('video', files[i]);
+                formData.append('videos', files[i]); // 注意字段名与后端 multer 一致
                 formData.append('_csrf', csrfToken);
-                await fetch('/api/upload', { method: 'POST', body: formData });
+                var resp = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (!resp.redirected) {
+                    var msg = await resp.text();
+                    showToast('上传失败：' + msg, 'error');
+                }
             }
             submitBtn.disabled = false; submitBtn.textContent = '上传';
-            showToast('映像已收录'); window.location.href = '/L0Ks.html';
+            showToast('映像已收录');
+            window.location.href = '/L0Ks.html';
         });
 
-        // ========== 视频时长显示 ==========
         document.getElementById('videoFile').addEventListener('change', function() {
             var file = this.files[0]; if (!file) return;
             var v = document.createElement('video'); v.preload = 'metadata';

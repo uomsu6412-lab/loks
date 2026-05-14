@@ -64,8 +64,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---- multer ----
-const upload = multer({ storage: multer.memoryStorage() });
+// ---- 文件上传限制 ----
+const videoFilter = (req, file, cb) => {
+  const allowedMimes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('仅支持 MP4、WebM、MOV、AVI、MKV 格式'), false);
+  }
+};
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 3 }, // 2GB，最多3个文件
+  fileFilter: videoFilter
+});
+
 const uploadAvatar = multer({ storage: multer.memoryStorage() });
 
 // ---- 中间件 ----
@@ -115,7 +129,7 @@ async function adminRequired(req, res, next) {
 
 app.get('/', (req, res) => res.redirect('/L0Ks.html'));
 
-// --- 注册 ---
+// --- 注册（自动登录） ---
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.send('用户名和密码不能为空');
@@ -126,8 +140,6 @@ app.post('/register', async (req, res) => {
       await pool.query('DELETE FROM users WHERE username = $1', [username]);
     }
     await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
-    
-    // ✅ 注册成功后自动设置登录 Cookie
     res.cookie('user', username, { httpOnly: true, sameSite: 'lax' });
     res.send('注册成功！');
   } catch (err) {
@@ -188,7 +200,6 @@ app.post('/api/profile/nickname', csrfProtection, async (req, res) => {
   }
 });
 
-// 头像上传（含显式凭据）
 app.post('/api/profile/avatar', uploadAvatar.single('avatar'), async (req, res) => {
   if (!req.cookies.user) return res.status(401).send('请先登录');
   if (!req.file) return res.status(400).send('未收到图片');
@@ -204,7 +215,7 @@ app.post('/api/profile/avatar', uploadAvatar.single('avatar'), async (req, res) 
       folder: 'loks-avatars',
       transformation: [{ width: 150, height: 150, crop: 'fill', quality: 'auto' }],
       public_id: 'avatar_' + req.cookies.user,
-      api_key: CLOUDINARY_API_KEY,       // 显式凭据
+      api_key: CLOUDINARY_API_KEY,
       api_secret: CLOUDINARY_API_SECRET,
       cloud_name: CLOUDINARY_CLOUD_NAME,
     });
@@ -235,22 +246,42 @@ app.post('/api/profile/password', csrfProtection, async (req, res) => {
   }
 });
 
-// --- 视频列表 ---
+// --- 视频列表（分页） ---
 app.get('/api/videos', async (req, res) => {
   try {
-    const { category } = req.query;
-    let query = 'SELECT * FROM videos';
+    const { category, page = 1, limit = 12 } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = Math.min(parseInt(limit) || 12, 50);
+    const offset = (pageNum - 1) * limitNum;
+
+    let countQuery = 'SELECT COUNT(*) FROM videos';
+    let dataQuery = 'SELECT * FROM videos';
     const params = [];
+
     if (category && category !== '全部') {
-      query += ' WHERE category = $1';
+      countQuery += ' WHERE category = $1';
+      dataQuery += ' WHERE category = $1';
       params.push(category);
     }
-    query += ' ORDER BY created_at DESC';
-    const result = await pool.query(query, params);
-    res.json(result.rows);
+
+    dataQuery += ' ORDER BY created_at DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
+
+    const countResult = await pool.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].count);
+
+    const dataParams = [...params, limitNum, offset];
+    const result = await pool.query(dataQuery, dataParams);
+
+    res.json({
+      videos: result.rows,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
+      limit: limitNum
+    });
   } catch (err) {
     console.error('获取视频列表失败:', err.message);
-    res.json([]);
+    res.json({ videos: [], total: 0, page: 1, totalPages: 0, limit: 12 });
   }
 });
 
@@ -297,43 +328,49 @@ app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
   }
 });
 
-// --- 上传视频 (含显式凭据) ---
-app.post('/api/upload', upload.single('video'), async (req, res) => {
+// --- 上传视频 ---
+app.post('/api/upload', upload.array('videos', 3), async (req, res) => {
   const cookieToken = req.cookies.csrf_token;
   const bodyToken = req.body._csrf;
   if (!cookieToken || !bodyToken || cookieToken !== bodyToken) {
     return res.status(403).send('CSRF 令牌无效');
   }
   if (!req.cookies.user) return res.status(401).send('请先登录');
-  if (!req.file) return res.status(400).send('未接收到视频文件');
+  if (!req.files || req.files.length === 0) return res.status(400).send('未接收到视频文件');
 
   const { title, category } = req.body;
   const safeCategory = category || '其他';
 
   try {
-    const base64Video = req.file.buffer.toString('base64');
-    const dataUri = `data:${req.file.mimetype};base64,${base64Video}`;
+    for (const file of req.files) {
+      const base64Video = file.buffer.toString('base64');
+      const dataUri = `data:${file.mimetype};base64,${base64Video}`;
 
-    const uploaded = await cloudinary.uploader.upload(dataUri, {
-      resource_type: 'video',
-      folder: 'loks-videos',
-      transformation: [{ quality: 'auto' }],
-      public_id: uuidv4(),
-      api_key: CLOUDINARY_API_KEY,
-      api_secret: CLOUDINARY_API_SECRET,
-      cloud_name: CLOUDINARY_CLOUD_NAME,
-      chunk_size: 6000000,
-      eager: [{ format: 'jpg', width: 320, height: 180, crop: 'fill' }],
-      eager_async: false,
-    });
+      const uploaded = await cloudinary.uploader.upload(dataUri, {
+        resource_type: 'video',
+        folder: 'loks-videos',
+        transformation: [{ quality: 'auto' }],
+        public_id: uuidv4(),
+        api_key: CLOUDINARY_API_KEY,
+        api_secret: CLOUDINARY_API_SECRET,
+        cloud_name: CLOUDINARY_CLOUD_NAME,
+        chunk_size: 6000000,
+        eager: [{ format: 'jpg', width: 320, height: 180, crop: 'fill' }],
+        eager_async: false,
+      });
 
-    const videoUrl = uploaded.secure_url;
-    const thumbnailUrl = uploaded.eager[0].secure_url;
+      const videoUrl = uploaded.secure_url;
+      const thumbnailUrl = uploaded.eager[0].secure_url;
 
-    await pool.query(
-      'INSERT INTO videos (title, filename, thumbnail, public_id, category, uploaded_by) VALUES ($1, $2, $3, $4, $5, $6)',
-      [title, videoUrl, thumbnailUrl, uploaded.public_id, safeCategory, req.cookies.user]
-    );
+      // 为每个文件构造标题，若用户填写了标题则自动添加序号
+      const index = req.files.indexOf(file);
+      const fileTitle = title ? `${title} (${index + 1}/${req.files.length})` : `视频 ${index + 1}`;
+
+      await pool.query(
+        'INSERT INTO videos (title, filename, thumbnail, public_id, category, uploaded_by) VALUES ($1, $2, $3, $4, $5, $6)',
+        [fileTitle, videoUrl, thumbnailUrl, uploaded.public_id, safeCategory, req.cookies.user]
+      );
+    }
 
     res.redirect('/L0Ks.html');
   } catch (err) {
@@ -392,6 +429,14 @@ app.delete('/api/admin/videos/:id', adminRequired, async (req, res) => {
 });
 
 // ---- 全局错误捕获 ----
+app.use((err, req, res, next) => {
+  console.error('未捕获的错误:', err);
+  if (err.message && err.message.includes('仅支持')) {
+    return res.status(400).send(err.message);
+  }
+  res.status(500).send('服务器内部错误');
+});
+
 process.on('uncaughtException', (err) => {
   console.error('未捕获的异常:', err.message, err.stack);
 });
