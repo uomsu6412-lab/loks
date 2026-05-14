@@ -47,10 +47,47 @@
             100% { transform: translateY(-10vh) scale(1); opacity: 0; }
         }
 
+        /* 搜索栏置顶 */
+        .search-bar {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto 10px;
+            padding: 0 20px;
+            z-index: 2;
+            display: flex;
+            gap: 8px;
+        }
+        .search-bar input {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 25px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.4);
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-bar input:focus {
+            border-color: var(--accent);
+        }
+        .search-bar input::placeholder { color: #888; }
+        .search-bar button {
+            padding: 10px 20px;
+            border-radius: 25px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .search-bar button:hover { transform: scale(1.05); }
+
         h1 {
             font-size: 2.8rem;
             font-weight: 700;
-            margin: 30px 0 10px;
+            margin: 10px 0 10px;
             background: linear-gradient(135deg, var(--accent), var(--accent2));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -105,6 +142,18 @@
             color: var(--text-secondary);
             margin-top: auto;
         }
+        .card .delete-btn {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: transform 0.2s;
+        }
+        .card .delete-btn:hover { transform: scale(1.05); }
 
         .form-box {
             background: var(--card-bg);
@@ -151,9 +200,7 @@
             transform: scale(1.05);
             box-shadow: 0 4px 15px rgba(233,69,96,0.4);
         }
-        button:active {
-            transform: scale(0.96);
-        }
+        button:active { transform: scale(0.96); }
         .btn-login { background: linear-gradient(135deg, var(--accent), #c0392b); }
         .btn-register { background: linear-gradient(135deg, var(--accent2), #6c5ce7); }
         .btn-upload { background: linear-gradient(135deg, #00b894, #0984e3); }
@@ -175,6 +222,13 @@
 <body>
     <!-- 粒子背景 -->
     <div class="particles" id="particles"></div>
+
+    <!-- 搜索栏置顶 -->
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="搜索视频..." maxlength="100">
+        <button id="searchBtn">🔍 搜索</button>
+    </div>
+    <p id="searchResult" style="color: var(--text-secondary); z-index: 1; font-size: 0.85rem;"></p>
 
     <h1>🎬 L0Ks</h1>
     <div class="user-area" id="userArea">未登录</div>
@@ -234,22 +288,27 @@
             }
         })();
 
-        // ========== 原有功能代码（与之前一致，未修改） ==========
+        // ========== 工具函数 ==========
         function getCsrfToken() {
             var match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
             return match ? match[1] : '';
         }
+
         function fillCsrf() {
             var token = getCsrfToken();
             document.getElementById('csrfInputLogin').value = token;
             document.getElementById('csrfInputReg').value = token;
             document.getElementById('csrfInputUpload').value = token;
         }
+
+        // ========== 页面初始化 ==========
         window.addEventListener('DOMContentLoaded', function() {
             fillCsrf();
             checkLogin();
             loadVideos();
         });
+
+        // ========== 检查登录状态 ==========
         async function checkLogin() {
             var response = await fetch('/api/user');
             var data = await response.json();
@@ -259,11 +318,14 @@
                 document.getElementById('uploadBox').style.display = 'block';
                 document.getElementById('authBox').style.display = 'none';
             } else {
+                window.currentUser = null;
                 document.getElementById('userArea').textContent = '未登录';
                 document.getElementById('uploadBox').style.display = 'none';
                 document.getElementById('authBox').style.display = 'block';
             }
         }
+
+        // ========== 加载视频列表 ==========
         async function loadVideos() {
             var response = await fetch('/api/videos');
             var videos = await response.json();
@@ -279,20 +341,43 @@
                 return;
             }
             videos.forEach(function(v) {
-             var card = document.createElement('div');
-             card.className = 'card';
-             var isOwner = (window.currentUser && v.uploaded_by === window.currentUser);
-             var deleteBtnHtml = isOwner ? `
-             <form onsubmit="return confirm('确定删除这部视频吗？')" action="/api/videos/${v.id}/delete" method="POST" style="margin-top:8px;">
-             <input type="hidden" name="_csrf" value="${getCsrfToken()}">
-             <button type="submit" style="background:#e94560; color:white; border:none; padding:4px 12px; border-radius:15px; font-size:0.8rem;">删除</button>
-             </form>` : '';
-             card.innerHTML = '<video controls src="' + v.filename + '" poster="' + (v.thumbnail || '') + '"></video>' +
-                     '<h3>' + v.title + '</h3>' +
-                     '<div class="meta">上传者：' + v.uploaded_by + '</div>' +
-                     deleteBtnHtml;
-                    container.appendChild(card);
-                       });
+                var card = document.createElement('div');
+                card.className = 'card';
+                var isOwner = (window.currentUser && v.uploaded_by === window.currentUser);
+                var deleteBtnHtml = isOwner ? `
+                    <button class="delete-btn" onclick="deleteVideo(${v.id})">🗑 删除</button>` : '';
+                card.innerHTML = '<video controls src="' + v.filename + '" poster="' + (v.thumbnail || '') + '"></video>' +
+                                 '<h3>' + v.title + '</h3>' +
+                                 '<div class="meta">上传者：' + v.uploaded_by + '</div>' +
+                                 deleteBtnHtml;
+                container.appendChild(card);
+            });
+        }
+
+        // ========== 删除视频 ==========
+        async function deleteVideo(id) {
+            if (!confirm('确定删除这部视频吗？')) return;
+            var csrfToken = getCsrfToken();
+            var response = await fetch('/api/videos/' + id + '/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ _csrf: csrfToken }).toString()
+            });
+            if (response.ok) {
+                loadVideos(); // 重新加载列表
+            } else {
+                alert('删除失败：' + await response.text());
+            }
+        }
+
+        // ========== 搜索功能 ==========
+        document.getElementById('searchBtn').addEventListener('click', function() {
+            var input = document.getElementById('searchInput').value;
+            document.getElementById('searchResult').textContent = input ? '搜索：' + input : '';
+            loadVideos(); // 简单重新加载，后续可优化为真实搜索
+        });
+
+        // ========== 登录 ==========
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var username = document.getElementById('loginUsername').value;
@@ -306,6 +391,8 @@
             document.getElementById('loginMsg').textContent = await response.text();
             if (response.ok) { checkLogin(); loadVideos(); }
         });
+
+        // ========== 注册 ==========
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var username = document.getElementById('regUsername').value;
@@ -318,6 +405,8 @@
             });
             document.getElementById('registerMsg').textContent = await response.text();
         });
+
+        // ========== 上传视频 ==========
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var formData = new FormData();
