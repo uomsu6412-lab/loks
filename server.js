@@ -352,6 +352,7 @@ app.delete('/api/admin/videos/:id', adminRequired, async (req, res) => {
     res.status(500).send('删除失败');
   }
 });
+// --- 上传视频 ---
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   const cookieToken = req.cookies.csrf_token;
   const bodyToken = req.body._csrf;
@@ -373,6 +374,7 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
       folder: 'loks-videos',
       transformation: [{ quality: 'auto' }],
       public_id: uuidv4(),
+      // 👇 这三行是解决 Must supply api_key 的关键
       api_key: CLOUDINARY_API_KEY,
       api_secret: CLOUDINARY_API_SECRET,
       cloud_name: CLOUDINARY_CLOUD_NAME,
@@ -380,6 +382,21 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
       eager: [{ format: 'jpg', width: 320, height: 180, crop: 'fill' }],
       eager_async: false,
     });
+
+    const videoUrl = uploaded.secure_url;
+    const thumbnailUrl = uploaded.eager[0].secure_url;
+
+    await pool.query(
+      'INSERT INTO videos (title, filename, thumbnail, public_id, category, uploaded_by) VALUES ($1, $2, $3, $4, $5, $6)',
+      [title, videoUrl, thumbnailUrl, uploaded.public_id, safeCategory, req.cookies.user]
+    );
+
+    res.redirect('/L0Ks.html');
+  } catch (err) {
+    console.error('上传失败:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+    res.send('上传失败，请稍后重试');
+  }
+});
 
     const videoUrl = uploaded.secure_url;
     const thumbnailUrl = uploaded.eager[0].secure_url;
