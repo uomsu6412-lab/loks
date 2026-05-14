@@ -19,14 +19,11 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
-
 (async () => {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
+        ...
       );
       CREATE TABLE IF NOT EXISTS videos (
         id SERIAL PRIMARY KEY,
@@ -36,6 +33,10 @@ const pool = new Pool({
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    // 👇 在下面这里加上这行
+    await pool.query('ALTER TABLE videos ADD COLUMN IF NOT EXISTS thumbnail TEXT;');
+
     console.log('PostgreSQL 数据库已连接');
   } catch (err) {
     console.error('数据库初始化失败:', err.message);
@@ -152,21 +153,25 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     const base64Video = req.file.buffer.toString('base64');
     const dataUri = `data:${req.file.mimetype};base64,${base64Video}`;
 
-    const uploaded = await cloudinary.uploader.upload(dataUri, {
-      resource_type: 'video',
-      folder: 'loks-videos',
-      transformation: [{ quality: 'auto' }],
-      public_id: uuidv4(),
-      api_key: CLOUDINARY_API_KEY,        // ← 新增
-      api_secret: CLOUDINARY_API_SECRET,  // ← 新增
-      cloud_name: CLOUDINARY_CLOUD_NAME,  // ← 新增
-    });
-    const videoUrl = uploaded.secure_url;
+const uploaded = await cloudinary.uploader.upload(dataUri, {
+  resource_type: 'video',
+  folder: 'loks-videos',
+  transformation: [{ quality: 'auto' }],
+  public_id: uuidv4(),
+  api_key: CLOUDINARY_API_KEY,
+  api_secret: CLOUDINARY_API_SECRET,
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  eager: [{ format: 'jpg', width: 320, height: 180, crop: 'fill' }],
+  eager_async: false,
+});
 
-    await pool.query(
-      'INSERT INTO videos (title, filename, uploaded_by) VALUES ($1, $2, $3)',
-      [title, videoUrl, req.cookies.user]
-    );
+const videoUrl = uploaded.secure_url;
+const thumbnailUrl = uploaded.eager[0].secure_url;
+
+await pool.query(
+  'INSERT INTO videos (title, filename, thumbnail, uploaded_by) VALUES ($1, $2, $3, $4)',
+  [title, videoUrl, thumbnailUrl, req.cookies.user]
+);
 
     res.redirect('/L0Ks.html');
   } catch (err) {
