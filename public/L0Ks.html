@@ -4,75 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎬 L0Ks - 私人番剧站</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
-    <!-- Google Analytics -->
+    <link rel="icon" href="data:image/svg+xml,...🎬</text></svg>">
+    <link rel="manifest" href="/manifest.json">
+    <!-- Google Analytics 预留 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-XXXXXXXXXX');
-    </script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
     <style>
         :root {
-            --bg-start: #0a0a1a;
-            --bg-end: #1a1a3e;
+            --bg-start: #0a0a1a; --bg-end: #1a1a3e;
             --card-bg: rgba(22, 33, 62, 0.85);
-            --accent: #e94560;
-            --accent2: #8b5cf6;
-            --text: #e0e0e0;
-            --text-secondary: #a0a0b0;
+            --accent: #e94560; --accent2: #8b5cf6;
+            --text: #e0e0e0; --text-secondary: #a0a0b0;
             --nav-bg: rgba(10, 10, 26, 0.8);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', '微软雅黑', Arial, sans-serif;
             background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
-            color: var(--text);
-            min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
+            color: var(--text); min-height: 100vh; overflow-x: hidden; position: relative;
         }
-        .particles {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-        .particle {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(233, 69, 96, 0.4);
-            animation: float linear infinite;
-        }
+        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .particle { position: absolute; border-radius: 50%; background: rgba(233,69,96,0.4); animation: float linear infinite; }
         @keyframes float {
             0% { transform: translateY(100vh) scale(0); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
+            10% { opacity: 1; } 90% { opacity: 1; }
             100% { transform: translateY(-10vh) scale(1); opacity: 0; }
         }
-
         /* 导航栏 */
         .navbar {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: var(--nav-bg);
-            backdrop-filter: blur(16px);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 24px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            flex-wrap: wrap;
-            gap: 10px;
+            position: sticky; top: 0; z-index: 100;
+            background: var(--nav-bg); backdrop-filter: blur(16px);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 24px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            flex-wrap: wrap; gap: 10px;
         }
-        .navbar-left { display: flex; align-items: center; gap: 12px; }
+        .navbar-left { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .navbar-left .avatar-img {
+            width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .navbar-left .avatar-placeholder {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(255,255,255,0.2); display: inline-flex;
+            align-items: center; justify-content: center; font-size: 1rem;
+        }
         .navbar-logo {
             font-size: 1.5rem; font-weight: bold;
             background: linear-gradient(135deg, var(--accent), var(--accent2));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
         }
         .navbar-user { font-size: 0.9rem; color: var(--text-secondary); }
@@ -80,38 +59,30 @@
         .search-box { display: flex; align-items: center; gap: 6px; }
         .search-box input {
             width: 160px; padding: 8px 14px; border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(0,0,0,0.4); color: white; font-size: 0.9rem;
-            outline: none; transition: border-color 0.2s;
+            border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.4);
+            color: white; font-size: 0.9rem; outline: none;
         }
         .search-box input:focus { border-color: var(--accent); }
         .search-box input::placeholder { color: #888; }
         .search-box button, .navbar select, .btn {
             padding: 8px 16px; border-radius: 20px;
             background: rgba(0,0,0,0.4); color: white;
-            border: 1px solid rgba(255,255,255,0.15);
-            cursor: pointer; font-size: 0.85rem; font-weight: 600;
-            transition: transform 0.2s; outline: none;
+            border: 1px solid rgba(255,255,255,0.15); cursor: pointer;
+            font-size: 0.85rem; font-weight: 600; transition: transform 0.2s; outline: none;
         }
         .search-box button { background: var(--accent); border: none; }
         .search-box button:hover, .navbar select:hover, .btn:hover { transform: scale(1.05); }
         .btn-auth { background: linear-gradient(135deg, var(--accent), #c0392b); }
         .btn-upload-nav { background: linear-gradient(135deg, #00b894, #0984e3); }
-        .btn-profile { background: rgba(255,255,255,0.2); border: none; }
 
         .main-content { position: relative; z-index: 1; padding: 20px 24px 60px; }
         .section-title { font-size: 1.5rem; margin: 0 0 20px; color: var(--text); }
-        .card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 24px;
-        }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
         .card {
             background: var(--card-bg); backdrop-filter: blur(12px);
-            border-radius: 20px; padding: 16px;
+            border-radius: 20px; padding: 16px; cursor: pointer;
             box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
-            transition: all 0.3s ease; cursor: pointer;
-            display: flex; flex-direction: column;
+            transition: all 0.3s ease; display: flex; flex-direction: column;
         }
         .card:hover {
             transform: translateY(-6px);
@@ -126,37 +97,34 @@
         .card .delete-btn {
             background: #e94560; color: white; border: none;
             padding: 4px 12px; border-radius: 15px; font-size: 0.8rem;
-            cursor: pointer; margin-top: 8px; transition: transform 0.2s;
-            z-index: 2; position: relative;
+            cursor: pointer; margin-top: 8px; z-index: 2; position: relative;
         }
         .card .delete-btn:hover { transform: scale(1.05); }
 
         /* 模态框 */
         .modal {
-            display: none; position: fixed; z-index: 200;
-            left: 0; top: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
-            justify-content: center; align-items: center;
+            display: none; position: fixed; z-index: 200; left: 0; top: 0;
+            width: 100%; height: 100%; background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(6px); justify-content: center; align-items: center;
         }
         .modal.open { display: flex; }
         .modal-content {
             background: var(--card-bg); backdrop-filter: blur(20px);
-            border-radius: 24px; padding: 30px; width: 100%;
-            max-width: 400px; box-shadow: 0 16px 48px rgba(0,0,0,0.6); color: white;
+            border-radius: 24px; padding: 30px; width: 100%; max-width: 400px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.6); color: white;
         }
         .modal-content h3 { margin-bottom: 16px; font-size: 1.3rem; }
         .modal-content input, .modal-content select {
             display: block; width: 100%; margin: 8px 0 16px;
             padding: 10px 14px; border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(0,0,0,0.35); color: white; font-size: 0.95rem;
+            border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.35);
+            color: white; font-size: 0.95rem;
         }
         .modal-content input::placeholder { color: #888; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         .modal-actions button {
             padding: 8px 20px; border-radius: 20px; border: none;
-            cursor: pointer; font-weight: 600; font-size: 0.9rem;
-            transition: transform 0.2s;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: transform 0.2s;
         }
         .modal-actions button:hover { transform: scale(1.05); }
         .btn-primary { background: var(--accent); color: white; }
@@ -176,19 +144,15 @@
         .empty-state { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
         .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.6; }
     </style>
-    <link rel="manifest" href="/manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js');
-  }
-</script>
 </head>
 <body>
     <div class="particles" id="particles"></div>
 
     <!-- 顶部导航栏 -->
     <nav class="navbar">
-        <div class="navbar-left">
+        <div class="navbar-left" onclick="window.location.href='/profile.html'">
+            <img id="navbarAvatar" class="avatar-img" src="" alt="头像" style="display: none;">
+            <span id="navbarAvatarPlaceholder" class="avatar-placeholder">👤</span>
             <span class="navbar-logo">🎬 L0Ks</span>
             <span class="navbar-user" id="navbarUser">未登录</span>
         </div>
@@ -206,7 +170,6 @@
             </select>
             <button id="btnAuth" class="btn btn-auth">登录 / 注册</button>
             <button id="btnUploadNav" class="btn btn-upload-nav" style="display: none;">📤 上传</button>
-            <a href="/profile.html" id="btnProfile" class="btn btn-profile" style="display: none;">👤 我的</a>
         </div>
     </nav>
 
@@ -216,7 +179,7 @@
         <div class="card-grid" id="videoContainer">
             <div class="empty-state">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M15.75 10.5l4.72-4.72..."/>
                 </svg>
                 <p>还没有人分享片源，成为第一个吧！</p>
             </div>
@@ -240,7 +203,7 @@
                         <button type="submit" class="btn-primary">登录</button>
                     </div>
                 </form>
-                <div id="loginMsg" style="margin-top: 10px; font-size: 0.9rem;"></div>
+                <div id="loginMsg" style="margin-top: 10px;"></div>
             </div>
             <div class="form-panel" id="registerPanel">
                 <form id="registerForm">
@@ -252,7 +215,7 @@
                         <button type="submit" class="btn-primary">注册</button>
                     </div>
                 </form>
-                <div id="registerMsg" style="margin-top: 10px; font-size: 0.9rem;"></div>
+                <div id="registerMsg" style="margin-top: 10px;"></div>
             </div>
         </div>
     </div>
@@ -271,23 +234,22 @@
                     <option value="其他">其他</option>
                 </select>
                 <input type="file" id="videoFile" name="videos" accept="video/*" multiple>
-                <span id="videoDuration" style="color: #a0a0b0; font-size: 0.85rem; margin-top: 4px;"></span>
+                <span id="videoDuration" style="color: #a0a0b0; font-size: 0.85rem;"></span>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" onclick="closeUploadModal()">取消</button>
                     <button type="submit" class="btn-primary">上传</button>
                 </div>
             </form>
-            <div id="uploadMsg" style="margin-top: 10px; font-size: 0.9rem;"></div>
+            <div id="uploadMsg" style="margin-top: 10px;"></div>
         </div>
     </div>
 
     <script>
-        // ========== 粒子动画 ==========
+        // 粒子动画
         (function() {
             const container = document.getElementById('particles');
             for (let i = 0; i < 40; i++) {
-                const p = document.createElement('div');
-                p.className = 'particle';
+                const p = document.createElement('div'); p.className = 'particle';
                 p.style.left = Math.random() * 100 + '%';
                 p.style.width = p.style.height = Math.random() * 4 + 2 + 'px';
                 p.style.animationDuration = Math.random() * 20 + 15 + 's';
@@ -296,7 +258,7 @@
             }
         })();
 
-        // ========== 工具函数 ==========
+        // 工具函数
         function getCsrfToken() {
             var match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
             return match ? match[1] : '';
@@ -308,20 +270,19 @@
             document.getElementById('csrfInputUpload').value = token;
         }
 
-        // ========== 模态框控制 ==========
+        // 模态框
         const authModal = document.getElementById('authModal');
         const uploadModal = document.getElementById('uploadModal');
         function openAuthModal() { authModal.classList.add('open'); fillCsrf(); }
         function closeAuthModal() { authModal.classList.remove('open'); }
         function openUploadModal() { uploadModal.classList.add('open'); fillCsrf(); }
         function closeUploadModal() { uploadModal.classList.remove('open'); }
-
         window.addEventListener('click', function(e) {
             if (e.target === authModal) closeAuthModal();
             if (e.target === uploadModal) closeUploadModal();
         });
 
-        // ========== 选项卡切换 ==========
+        // 选项卡
         document.querySelectorAll('.tabs span').forEach(tab => {
             tab.addEventListener('click', function() {
                 document.querySelectorAll('.tabs span').forEach(t => t.classList.remove('active'));
@@ -334,37 +295,50 @@
             });
         });
 
-        // ========== 页面初始化 ==========
-        window.addEventListener('DOMContentLoaded', function() {
-            fillCsrf();
-            checkLogin();
-            loadVideos();
-        });
+        // 初始化
+        window.addEventListener('DOMContentLoaded', function() { fillCsrf(); checkLogin(); loadVideos(); });
 
-        // ========== 检查登录状态 ==========
+        // 检查登录状态（含头像加载）
         async function checkLogin() {
             var response = await fetch('/api/user');
             var data = await response.json();
             var navbarUser = document.getElementById('navbarUser');
             var btnAuth = document.getElementById('btnAuth');
             var btnUploadNav = document.getElementById('btnUploadNav');
-            var btnProfile = document.getElementById('btnProfile');
+            var avatarImg = document.getElementById('navbarAvatar');
+            var avatarPlaceholder = document.getElementById('navbarAvatarPlaceholder');
+
             if (data.username) {
                 window.currentUser = data.username;
-                navbarUser.textContent = '👤 ' + data.username;
+                navbarUser.textContent = data.username;
                 btnAuth.style.display = 'none';
                 btnUploadNav.style.display = 'inline-block';
-                btnProfile.style.display = 'inline-block';
+                try {
+                    var profileResp = await fetch('/api/profile');
+                    var profile = await profileResp.json();
+                    if (profile.avatar) {
+                        avatarImg.src = profile.avatar;
+                        avatarImg.style.display = 'inline-block';
+                        avatarPlaceholder.style.display = 'none';
+                    } else {
+                        avatarImg.style.display = 'none';
+                        avatarPlaceholder.style.display = 'inline-block';
+                    }
+                } catch (e) {
+                    avatarImg.style.display = 'none';
+                    avatarPlaceholder.style.display = 'inline-block';
+                }
             } else {
                 window.currentUser = null;
                 navbarUser.textContent = '未登录';
                 btnAuth.style.display = 'inline-block';
                 btnUploadNav.style.display = 'none';
-                btnProfile.style.display = 'none';
+                avatarImg.style.display = 'none';
+                avatarPlaceholder.style.display = 'inline-block';
             }
         }
 
-        // ========== 加载视频列表（支持分类、自动优化URL） ==========
+        // 加载视频列表
         async function loadVideos(category) {
             var url = '/api/videos';
             if (category && category !== '全部') url += '?category=' + encodeURIComponent(category);
@@ -373,103 +347,64 @@
             var container = document.getElementById('videoContainer');
             container.innerHTML = '';
             if (videos.length === 0) {
-                container.innerHTML = `<div class="empty-state">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <p>还没有人分享片源，成为第一个吧！</p>
-                </div>`;
+                container.innerHTML = '<div class="empty-state">...</div>';
                 return;
             }
             videos.forEach(function(v) {
-                var card = document.createElement('div');
-                card.className = 'card';
-                card.dataset.videoId = v.id;
+                var card = document.createElement('div'); card.className = 'card';
                 var isOwner = (window.currentUser && v.uploaded_by === window.currentUser);
-                var deleteBtnHtml = isOwner ? `<button class="delete-btn">🗑 删除</button>` : '';
-                // Cloudinary 自动优化链接
+                var deleteBtnHtml = isOwner ? '<button class="delete-btn">🗑 删除</button>' : '';
                 var optimizedUrl = v.filename.replace('/upload/', '/upload/f_auto,q_auto/');
                 card.innerHTML = '<video controls src="' + optimizedUrl + '" poster="' + (v.thumbnail || '') + '"></video>' +
-                                 '<h3>' + v.title + '</h3>' +
-                                 '<div class="meta">上传者：' + v.uploaded_by + ' | 分类：' + (v.category || '其他') + '</div>' +
-                                 deleteBtnHtml;
-
-                // 点击卡片跳转详情页，但排除删除按钮
+                                 '<h3>' + v.title + '</h3><div class="meta">上传者：' + v.uploaded_by + ' | 分类：' + (v.category || '其他') + '</div>' + deleteBtnHtml;
                 card.addEventListener('click', function(e) {
-                    if (e.target.closest('.delete-btn')) {
-                        e.preventDefault();
-                        deleteVideo(v.id);
-                    } else {
-                        window.location.href = '/video.html?id=' + v.id;
-                    }
+                    if (e.target.closest('.delete-btn')) { e.preventDefault(); deleteVideo(v.id); }
+                    else { window.location.href = '/video.html?id=' + v.id; }
                 });
                 container.appendChild(card);
             });
         }
 
-        // ========== 删除视频 ==========
+        // 删除视频
         async function deleteVideo(id) {
-            if (!confirm('确定删除这部视频吗？')) return;
-            var csrfToken = getCsrfToken();
-            var response = await fetch('/api/videos/' + id + '/delete', {
+            if (!confirm('确定删除？')) return;
+            var resp = await fetch('/api/videos/' + id + '/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ _csrf: csrfToken }).toString()
+                body: new URLSearchParams({ _csrf: getCsrfToken() }).toString()
             });
-            if (response.ok) {
-                loadVideos(document.getElementById('categoryFilter').value);
-            } else {
-                alert('删除失败：' + await response.text());
-            }
+            if (resp.ok) loadVideos(document.getElementById('categoryFilter').value);
         }
 
-        // ========== 搜索与分类筛选 ==========
-        document.getElementById('searchBtn').addEventListener('click', function() {
-            loadVideos(document.getElementById('categoryFilter').value);
-        });
-        document.getElementById('categoryFilter').addEventListener('change', function() {
-            loadVideos(this.value);
-        });
+        // 搜索与分类
+        document.getElementById('searchBtn').addEventListener('click', () => loadVideos(document.getElementById('categoryFilter').value));
+        document.getElementById('categoryFilter').addEventListener('change', function() { loadVideos(this.value); });
 
-        // ========== 登录 ==========
+        // 登录
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            var username = document.getElementById('loginUsername').value;
-            var password = document.getElementById('loginPassword').value;
-            var csrfToken = document.getElementById('csrfInputLogin').value;
-            var response = await fetch('/login', {
+            var resp = await fetch('/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ username, password, _csrf: csrfToken }).toString()
+                body: new URLSearchParams({ username: document.getElementById('loginUsername').value, password: document.getElementById('loginPassword').value, _csrf: getCsrfToken() }).toString()
             });
-            var msg = await response.text();
-            document.getElementById('loginMsg').textContent = msg;
-            if (msg === '登录成功！') {
-                closeAuthModal();
-                checkLogin();
-                loadVideos();
-            }
+            document.getElementById('loginMsg').textContent = await resp.text();
+            if (resp.ok) { closeAuthModal(); checkLogin(); loadVideos(); }
         });
 
-        // ========== 注册 ==========
+        // 注册
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            var username = document.getElementById('regUsername').value;
-            var password = document.getElementById('regPassword').value;
-            var csrfToken = document.getElementById('csrfInputReg').value;
-            var response = await fetch('/register', {
+            var resp = await fetch('/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ username, password, _csrf: csrfToken }).toString()
+                body: new URLSearchParams({ username: document.getElementById('regUsername').value, password: document.getElementById('regPassword').value, _csrf: getCsrfToken() }).toString()
             });
-            var msg = await response.text();
-            document.getElementById('registerMsg').textContent = msg;
-            if (msg === '注册成功！') {
-                document.querySelector('.tabs span[data-tab="login"]').click();
-            }
+            document.getElementById('registerMsg').textContent = await resp.text();
+            if (await resp.text() === '注册成功！') document.querySelector('.tabs span[data-tab="login"]').click();
         });
 
-        // ========== 上传视频（多文件） ==========
+        // 上传（多文件）
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var files = document.getElementById('videoFile').files;
@@ -480,35 +415,25 @@
 
             for (var i = 0; i < files.length; i++) {
                 var formData = new FormData();
-                var fileTitle = title ? title + ' (' + (i+1) + '/' + files.length + ')' : '视频 ' + (i+1);
-                formData.append('title', fileTitle);
+                formData.append('title', title ? title + ' (' + (i+1) + '/' + files.length + ')' : '视频 ' + (i+1));
                 formData.append('category', category);
                 formData.append('video', files[i]);
                 formData.append('_csrf', csrfToken);
-
-                var response = await fetch('/api/upload', { method: 'POST', body: formData });
-                if (!response.redirected) {
-                    var msg = await response.text();
-                    document.getElementById('uploadMsg').textContent = msg;
-                }
+                await fetch('/api/upload', { method: 'POST', body: formData });
             }
             window.location.href = '/L0Ks.html';
         });
 
         // 显示视频时长
         document.getElementById('videoFile').addEventListener('change', function() {
-            var file = this.files[0];
-            if (!file) return;
-            var videoEl = document.createElement('video');
-            videoEl.preload = 'metadata';
-            videoEl.onloadedmetadata = function() {
-                var duration = Math.round(videoEl.duration);
-                var minutes = Math.floor(duration / 60);
-                var seconds = duration % 60;
-                document.getElementById('videoDuration').textContent = '时长：' + minutes + '分' + seconds + '秒';
-                window.URL.revokeObjectURL(videoEl.src);
+            var file = this.files[0]; if (!file) return;
+            var v = document.createElement('video'); v.preload = 'metadata';
+            v.onloadedmetadata = function() {
+                var m = Math.floor(v.duration / 60), s = Math.round(v.duration % 60);
+                document.getElementById('videoDuration').textContent = '时长：' + m + '分' + s + '秒';
+                URL.revokeObjectURL(v.src);
             };
-            videoEl.src = window.URL.createObjectURL(file);
+            v.src = URL.createObjectURL(file);
         });
 
         // 导航栏按钮绑定
