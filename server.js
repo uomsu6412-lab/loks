@@ -5,14 +5,15 @@ const { Pool } = require('pg');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { Readable } = require('stream');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
-// ---- Cloudinary 配置 ----
+// ---- Cloudinary 硬编码配置（测试用） ----
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: 'dyh7g2qu5',
+  api_key: '923574445472679',
+  api_secret: 'yUYJYLx-hI0kvYjTVfjG2rLOpYc'
 });
 
 // ---- 数据库连接（PostgreSQL） ----
@@ -52,7 +53,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---- multer 内存存储（不写磁盘） ----
+// ---- multer 内存存储 ----
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ---- 中间件 ----
@@ -137,7 +138,7 @@ app.get('/api/videos', async (req, res) => {
   }
 });
 
-// 上传视频（内存缓冲 → Cloudinary 流式上传）
+// 上传视频（base64 直传，硬编码凭据）
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   const cookieToken = req.cookies.csrf_token;
   const bodyToken = req.body._csrf;
@@ -145,24 +146,19 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     return res.status(403).send('CSRF 令牌无效');
   }
   if (!req.cookies.user) return res.status(401).send('请先登录');
-
-  if (!req.file) {
-    return res.status(400).send('未接收到视频文件');
-  }
+  if (!req.file) return res.status(400).send('未接收到视频文件');
 
   const { title } = req.body;
 
   try {
-    // 将 buffer 转为 base64 字符串
     const base64Video = req.file.buffer.toString('base64');
     const dataUri = `data:${req.file.mimetype};base64,${base64Video}`;
 
-    // 使用 upload 方法（自动读取全局配置的凭据）
     const uploaded = await cloudinary.uploader.upload(dataUri, {
       resource_type: 'video',
       folder: 'loks-videos',
       transformation: [{ quality: 'auto' }],
-      public_id: require('uuid').v4(), // 唯一文件名
+      public_id: uuidv4(),
     });
 
     const videoUrl = uploaded.secure_url;
@@ -173,12 +169,9 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     );
 
     res.redirect('/L0Ks.html');
-   } catch (err) {
-    // 打印完整的错误对象，包括所有属性
+  } catch (err) {
     console.error('上传失败 - 完整错误:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-    console.error('上传失败 - message:', err.message);
-    console.error('上传失败 - stack:', err.stack);
-    if (err.error) console.error('上传失败 - Cloudinary 原始错误:', JSON.stringify(err.error, null, 2));
+    if (err.error) console.error('Cloudinary 原始错误:', JSON.stringify(err.error));
     res.send('上传失败，请稍后重试');
   }
 });
