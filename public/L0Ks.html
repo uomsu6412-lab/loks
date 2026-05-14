@@ -556,8 +556,13 @@
             var msg = await resp.text();
             document.getElementById('registerMsg').textContent = msg;
             btn.disabled = false; btn.textContent = '注册';
-            if (msg === '注册成功！') { showToast('注册成功，请登录'); document.querySelector('.tabs span[data-tab="login"]').click(); }
-            else { showToast(msg, 'error'); }
+            if (msg === '注册成功！') {
+             showToast('注册成功，欢迎加入');
+             closeAuthModal();
+             checkLogin();
+             loadVideos();
+    }
+             else { showToast(msg, 'error'); }
         });
 
         // ========== 上传（多文件，带loading） ==========

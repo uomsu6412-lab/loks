@@ -126,6 +126,9 @@ app.post('/register', async (req, res) => {
       await pool.query('DELETE FROM users WHERE username = $1', [username]);
     }
     await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
+    
+    // ✅ 注册成功后自动设置登录 Cookie
+    res.cookie('user', username, { httpOnly: true, sameSite: 'lax' });
     res.send('注册成功！');
   } catch (err) {
     console.error('注册出错:', err.message);
