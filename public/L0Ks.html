@@ -249,10 +249,25 @@
             }
             .skeleton-card { padding: 12px; }
         }
-    </style>
+    </style>if (profile.avatar) {
+    avatarImg.src = profile.avatar;
+    avatarImg.style.display = 'inline-block';
+    avatarPlaceholder.style.display = 'none';
+} else {
+    avatarImg.style.display = 'none';
+    avatarPlaceholder.style.display = 'inline-block';
+}
+// 显示管理后台入口
+var btnAdmin = document.getElementById('btnAdmin');
+if (profile.is_admin) {
+    btnAdmin.style.display = 'inline-block';
+} else {
+    btnAdmin.style.display = 'none';
+}
 </head>
 <body>
-    <div class="toast-container" id="toastContainer"></div>
+    <div class="toast-container" id="toastContainer"></div<button id="btnUploadNav" class="btn btn-upload-nav" style="display: none;">上传</button>
+        <a href="/admin.html" id="btnAdmin" class="btn" style="display: none; background: linear-gradient(135deg, #f0a500, #d98c00); border: none;">后台</a>
     <div class="particles" id="particles"></div>
 
     <nav class="navbar">
@@ -447,6 +462,7 @@
                 navbarUser.textContent = '未登录';
                 btnAuth.style.display = 'inline-block';
                 btnUploadNav.style.display = 'none';
+                btnAdmin.style.display = 'none';
                 avatarImg.style.display = 'none';
                 avatarPlaceholder.style.display = 'inline-block';
             }

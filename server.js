@@ -178,7 +178,7 @@ app.get('/api/user', (req, res) => {
 app.get('/api/profile', async (req, res) => {
   if (!req.cookies.user) return res.status(401).json({ error: '未登录' });
   try {
-    const result = await pool.query('SELECT username, nickname, avatar FROM users WHERE username = $1', [req.cookies.user]);
+    const result = await pool.query('SELECT username, nickname, avatar, is_admin FROM users WHERE username = $1', [req.cookies.user]);
     if (result.rows.length === 0) return res.status(404).json({ error: '用户不存在' });
     res.json(result.rows[0]);
   } catch (err) {
