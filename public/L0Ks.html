@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🎬 L0Ks - 私人番剧站</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
     <link rel="manifest" href="/manifest.json">
@@ -170,72 +170,73 @@
 
         .empty-state { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
         .empty-state svg { width: 80px; height: 80px; margin-bottom: 20px; opacity: 0.6; }
+
         /* ========== 手机端适配 ========== */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 8px 12px;
-        gap: 6px;
-    }
-    .navbar-left {
-        gap: 8px;
-    }
-    .navbar-left .avatar-img,
-    .navbar-left .avatar-placeholder {
-        width: 28px;
-        height: 28px;
-    }
-    .navbar-logo {
-        font-size: 1.2rem;
-    }
-    .navbar-user {
-        font-size: 0.75rem;
-        max-width: 80px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    .navbar-right {
-        gap: 4px;
-    }
-    .search-box input {
-        width: 100px;
-        padding: 6px 10px;
-        font-size: 0.75rem;
-    }
-    .search-box button,
-    .navbar select,
-    .btn {
-        padding: 6px 10px;
-        font-size: 0.7rem;
-        border-radius: 15px;
-    }
-    .card-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
-        padding: 0 12px;
-    }
-    .main-content {
-        padding: 15px 8px 40px;
-    }
-    .section-title {
-        font-size: 1.2rem;
-        margin-bottom: 12px;
-    }
-    .modal-content {
-        margin: 0 16px;
-        padding: 20px;
-    }
-    .toast-container {
-        top: 10px;
-        right: 10px;
-        left: 10px;
-    }
-    .toast {
-        font-size: 0.8rem;
-        padding: 10px 18px;
-        max-width: 100%;
-    }
-}
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 8px 12px;
+                gap: 6px;
+            }
+            .navbar-left {
+                gap: 6px;
+            }
+            .navbar-left .avatar-img,
+            .navbar-left .avatar-placeholder {
+                width: 28px;
+                height: 28px;
+            }
+            .navbar-logo {
+                font-size: 1.2rem;
+            }
+            .navbar-user {
+                font-size: 0.75rem;
+                max-width: 80px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .navbar-right {
+                gap: 4px;
+            }
+            .search-box input {
+                width: 90px;
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+            .search-box button,
+            .navbar select,
+            .btn {
+                padding: 6px 10px;
+                font-size: 0.7rem;
+                border-radius: 15px;
+            }
+            .card-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+                padding: 0 12px;
+            }
+            .main-content {
+                padding: 15px 8px 40px;
+            }
+            .section-title {
+                font-size: 1.2rem;
+                margin-bottom: 12px;
+            }
+            .modal-content {
+                margin: 0 16px;
+                padding: 20px;
+            }
+            .toast-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+            }
+            .toast {
+                font-size: 0.8rem;
+                padding: 10px 18px;
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
