@@ -15,10 +15,10 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// ---- Cloudinary 凭据 ----
+// ---- Cloudinary 凭据（硬编码） ----
 const CLOUDINARY_CLOUD_NAME = 'dyh7g2qu5';
 const CLOUDINARY_API_KEY = '923574445472679';
-const CLOUDINARY_API_SECRET = 'yUYJYLx-hI0kvYjTVfjG2rLOpYct';
+const CLOUDINARY_API_SECRET = 'yUYJYLx-hI0kvYjTVfjG2rLOpYc';
 
 // ---- 数据库 ----
 const pool = new Pool({
@@ -185,6 +185,7 @@ app.post('/api/profile/nickname', csrfProtection, async (req, res) => {
   }
 });
 
+// 头像上传（含显式凭据）
 app.post('/api/profile/avatar', uploadAvatar.single('avatar'), async (req, res) => {
   if (!req.cookies.user) return res.status(401).send('请先登录');
   if (!req.file) return res.status(400).send('未收到图片');
@@ -196,12 +197,11 @@ app.post('/api/profile/avatar', uploadAvatar.single('avatar'), async (req, res) 
   try {
     const base64Image = req.file.buffer.toString('base64');
     const dataUri = `data:${req.file.mimetype};base64,${base64Image}`;
-    console.log('Cloudinary 凭据检查:', CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET ? '密钥已设置' : '密钥为空');
     const uploaded = await cloudinary.uploader.upload(dataUri, {
       folder: 'loks-avatars',
       transformation: [{ width: 150, height: 150, crop: 'fill', quality: 'auto' }],
       public_id: 'avatar_' + req.cookies.user,
-      api_key: CLOUDINARY_API_KEY,
+      api_key: CLOUDINARY_API_KEY,       // 显式凭据
       api_secret: CLOUDINARY_API_SECRET,
       cloud_name: CLOUDINARY_CLOUD_NAME,
     });
@@ -316,9 +316,9 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
       folder: 'loks-videos',
       transformation: [{ quality: 'auto' }],
       public_id: uuidv4(),
-      api_key: '923574445472679',
-      api_secret: 'yUYJYLx-hI0kvYjTVfjG2rLOpYc',
-      cloud_name: 'dyh7g2qu5',
+      api_key: CLOUDINARY_API_KEY,
+      api_secret: CLOUDINARY_API_SECRET,
+      cloud_name: CLOUDINARY_CLOUD_NAME,
       chunk_size: 6000000,
       eager: [{ format: 'jpg', width: 320, height: 180, crop: 'fill' }],
       eager_async: false,
