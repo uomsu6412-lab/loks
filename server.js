@@ -176,8 +176,9 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
       [title, videoUrl, req.cookies.user]);
     res.redirect('/L0Ks.html');
   } catch (err) {
-    console.error('上传失败:', err.message);
-    try { fs.unlinkSync(req.file.path); } catch (e) {}
+    console.error('上传失败详情:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+    if (err.error) console.error('Cloudinary 错误:', err.error);
+    try { if (req.file && req.file.path) fs.unlinkSync(req.file.path); } catch (e) {}
     res.send('上传失败，请稍后重试');
   }
 });
