@@ -23,7 +23,9 @@ const pool = new Pool({
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
-        ...
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
       );
       CREATE TABLE IF NOT EXISTS videos (
         id SERIAL PRIMARY KEY,
@@ -34,8 +36,9 @@ const pool = new Pool({
       );
     `);
 
-    // 👇 在下面这里加上这行
+    // 👇 在这里添加新列
     await pool.query('ALTER TABLE videos ADD COLUMN IF NOT EXISTS thumbnail TEXT;');
+    await pool.query('ALTER TABLE videos ADD COLUMN IF NOT EXISTS public_id TEXT;');
 
     console.log('PostgreSQL 数据库已连接');
   } catch (err) {
@@ -136,6 +139,32 @@ app.get('/api/videos', async (req, res) => {
     res.json([]);
   }
 });
+   // 删除视频（仅上传者本人可删）
+   app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
+   if (!req.cookies.user) return res.status(401).send('请先登录');
+   const { id } = req.params;
+   try {
+    const result = await pool.query('SELECT * FROM videos WHERE id = $1', [id]);
+    const video = result.rows[0];
+    if (!video) return res.status(404).send('视频不存在');
+    if (video.uploaded_by !== req.cookies.user) {
+      return res.status(403).send('无权删除他人视频');
+    }
+    // 从 Cloudinary 删除
+    await cloudinary.uploader.destroy(video.public_id, {
+      resource_type: 'video',
+      api_key: CLOUDINARY_API_KEY,
+      api_secret: CLOUDINARY_API_SECRET,
+      cloud_name: CLOUDINARY_CLOUD_NAME,
+    });
+    // 从数据库删除
+    await pool.query('DELETE FROM videos WHERE id = $1', [id]);
+    res.send('删除成功');
+   } catch (err) {
+    console.error('删除失败:', err.message);
+    res.status(500).send('删除失败');
+   }
+   });
 
 // 上传视频（base64 直传，硬编码凭据）
 app.post('/api/upload', upload.single('video'), async (req, res) => {
@@ -169,8 +198,8 @@ const videoUrl = uploaded.secure_url;
 const thumbnailUrl = uploaded.eager[0].secure_url;
 
 await pool.query(
-  'INSERT INTO videos (title, filename, thumbnail, uploaded_by) VALUES ($1, $2, $3, $4)',
-  [title, videoUrl, thumbnailUrl, req.cookies.user]
+  'INSERT INTO videos (title, filename, thumbnail, public_id, uploaded_by) VALUES ($1, $2, $3, $4, $5)',
+  [title, videoUrl, thumbnailUrl, uploaded.public_id, req.cookies.user]
 );
 
     res.redirect('/L0Ks.html');

@@ -254,6 +254,7 @@
             var response = await fetch('/api/user');
             var data = await response.json();
             if (data.username) {
+                window.currentUser = data.username;
                 document.getElementById('userArea').textContent = '👤 ' + data.username + ' 已登录';
                 document.getElementById('uploadBox').style.display = 'block';
                 document.getElementById('authBox').style.display = 'none';
@@ -278,14 +279,20 @@
                 return;
             }
             videos.forEach(function(v) {
-                var card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = '<video controls src="' + v.filename + '" poster="' + (v.thumbnail || '') + '"></video>' +
-                                 '<h3>' + v.title + '</h3>' +
-                                 '<div class="meta">上传者：' + v.uploaded_by + '</div>';
-                container.appendChild(card);
-            });
-        }
+             var card = document.createElement('div');
+             card.className = 'card';
+             var isOwner = (window.currentUser && v.uploaded_by === window.currentUser);
+             var deleteBtnHtml = isOwner ? `
+             <form onsubmit="return confirm('确定删除这部视频吗？')" action="/api/videos/${v.id}/delete" method="POST" style="margin-top:8px;">
+             <input type="hidden" name="_csrf" value="${getCsrfToken()}">
+             <button type="submit" style="background:#e94560; color:white; border:none; padding:4px 12px; border-radius:15px; font-size:0.8rem;">删除</button>
+             </form>` : '';
+             card.innerHTML = '<video controls src="' + v.filename + '" poster="' + (v.thumbnail || '') + '"></video>' +
+                     '<h3>' + v.title + '</h3>' +
+                     '<div class="meta">上传者：' + v.uploaded_by + '</div>' +
+                     deleteBtnHtml;
+                    container.appendChild(card);
+                       });
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var username = document.getElementById('loginUsername').value;
