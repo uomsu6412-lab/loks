@@ -76,7 +76,7 @@ const videoFilter = (req, file, cb) => {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 3 }, // 2GB，最多3个文件
+  limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 3 }, // 2GB，最多3个文件（实际单文件上传）
   fileFilter: videoFilter
 });
 
@@ -174,7 +174,7 @@ app.get('/api/user', (req, res) => {
   res.json({ username: req.cookies.user || null });
 });
 
-// --- 用户资料 ---
+// --- 用户资料（返回 is_admin） ---
 app.get('/api/profile', async (req, res) => {
   if (!req.cookies.user) return res.status(401).json({ error: '未登录' });
   try {
@@ -328,49 +328,43 @@ app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
   }
 });
 
-// --- 上传视频 ---
-app.post('/api/upload', upload.array('videos', 3), async (req, res) => {
+// --- 上传视频（单文件，2GB 限制） ---
+app.post('/api/upload', upload.single('video'), async (req, res) => {
   const cookieToken = req.cookies.csrf_token;
   const bodyToken = req.body._csrf;
   if (!cookieToken || !bodyToken || cookieToken !== bodyToken) {
     return res.status(403).send('CSRF 令牌无效');
   }
   if (!req.cookies.user) return res.status(401).send('请先登录');
-  if (!req.files || req.files.length === 0) return res.status(400).send('未接收到视频文件');
+  if (!req.file) return res.status(400).send('未接收到视频文件');
 
   const { title, category } = req.body;
   const safeCategory = category || '其他';
 
   try {
-    for (const file of req.files) {
-      const base64Video = file.buffer.toString('base64');
-      const dataUri = `data:${file.mimetype};base64,${base64Video}`;
+    const base64Video = req.file.buffer.toString('base64');
+    const dataUri = `data:${req.file.mimetype};base64,${base64Video}`;
 
-      const uploaded = await cloudinary.uploader.upload(dataUri, {
-        resource_type: 'video',
-        folder: 'loks-videos',
-        transformation: [{ quality: 'auto' }],
-        public_id: uuidv4(),
-        api_key: CLOUDINARY_API_KEY,
-        api_secret: CLOUDINARY_API_SECRET,
-        cloud_name: CLOUDINARY_CLOUD_NAME,
-        chunk_size: 6000000,
-        eager: [{ format: 'jpg', width: 320, height: 180, crop: 'fill' }],
-        eager_async: false,
-      });
+    const uploaded = await cloudinary.uploader.upload(dataUri, {
+      resource_type: 'video',
+      folder: 'loks-videos',
+      transformation: [{ quality: 'auto' }],
+      public_id: uuidv4(),
+      api_key: CLOUDINARY_API_KEY,
+      api_secret: CLOUDINARY_API_SECRET,
+      cloud_name: CLOUDINARY_CLOUD_NAME,
+      chunk_size: 6000000,
+      eager: [{ format: 'jpg', width: 320, height: 180, crop: 'fill' }],
+      eager_async: false,
+    });
 
-      const videoUrl = uploaded.secure_url;
-      const thumbnailUrl = uploaded.eager[0].secure_url;
+    const videoUrl = uploaded.secure_url;
+    const thumbnailUrl = uploaded.eager[0].secure_url;
 
-      // 为每个文件构造标题，若用户填写了标题则自动添加序号
-      const index = req.files.indexOf(file);
-      const fileTitle = title ? `${title} (${index + 1}/${req.files.length})` : `视频 ${index + 1}`;
-
-      await pool.query(
-        'INSERT INTO videos (title, filename, thumbnail, public_id, category, uploaded_by) VALUES ($1, $2, $3, $4, $5, $6)',
-        [fileTitle, videoUrl, thumbnailUrl, uploaded.public_id, safeCategory, req.cookies.user]
-      );
-    }
+    await pool.query(
+      'INSERT INTO videos (title, filename, thumbnail, public_id, category, uploaded_by) VALUES ($1, $2, $3, $4, $5, $6)',
+      [title, videoUrl, thumbnailUrl, uploaded.public_id, safeCategory, req.cookies.user]
+    );
 
     res.redirect('/L0Ks.html');
   } catch (err) {
