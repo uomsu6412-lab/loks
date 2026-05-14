@@ -61,7 +61,7 @@ app.use((req, res, next) => {
 
 // ---- 文件上传配置（磁盘临时存储） ----
 const storage = multer.diskStorage({
-  destination: 'public/videos/',
+  destination: '/tmp/',
   filename: (req, file, cb) => {
     cb(null, uuidv4() + path.extname(file.originalname));
   }
