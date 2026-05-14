@@ -50,6 +50,7 @@ const pool = new Pool({
     await pool.query("ALTER TABLE videos ADD COLUMN IF NOT EXISTS category TEXT DEFAULT '其他';");
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname TEXT;');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;');
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;');
     console.log('数据库已连接');
   } catch (err) {
