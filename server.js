@@ -11,11 +11,17 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 
 // ---- Cloudinary 配置 ----
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+try {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+  console.log('Cloudinary 配置成功');
+} catch (err) {
+  console.error('Cloudinary 配置失败:', err.message);
+  // 如果 Cloudinary 配置失败，继续运行但上传功能不可用
+}
 
 // ---- 数据库连接（PostgreSQL） ----
 const pool = new Pool({
