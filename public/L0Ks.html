@@ -218,6 +218,11 @@
 
     <!-- 主内容区 -->
     <div class="main-content">
+        <!-- 继续观看区域 -->
+<div id="continueWatchingSection" style="display: none;">
+    <div class="section-title">⏳ 继续观看</div>
+    <div class="card-grid" id="continueWatchingContainer"></div>
+</div>
         <div class="section-title">📺 番剧列表</div>
         <div class="card-grid" id="videoContainer">
             <!-- 骨架屏占位，加载时显示 -->
@@ -347,7 +352,60 @@
         });
 
         // ========== 初始化 ==========
-        window.addEventListener('DOMContentLoaded', function() { fillCsrf(); checkLogin(); loadVideos(); });
+        window.addEventListener('DOMContentLoaded', function() { fillCsrf(); checkLogin(); loadVideos(); loadContinueWatching(); });
+        // ========== 加载继续观看列表 ==========
+function loadContinueWatching() {
+    const container = document.getElementById('continueWatchingContainer');
+    const section = document.getElementById('continueWatchingSection');
+    container.innerHTML = '';
+
+    // 扫描 localStorage 中所有 l0ks_video_ 开头的记录
+    const historyItems = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('l0ks_video_')) {
+            const videoId = key.replace('l0ks_video_', '');
+            const savedTime = parseFloat(localStorage.getItem(key));
+            if (savedTime > 5) { // 至少看了5秒才算
+                historyItems.push({ id: videoId, time: savedTime });
+            }
+        }
+    }
+
+    if (historyItems.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+
+    // 根据视频ID获取视频信息
+    historyItems.forEach(async function(item) {
+        try {
+            const resp = await fetch('/api/videos/' + item.id);
+            if (!resp.ok) return;
+            const video = await resp.json();
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.position = 'relative';
+            const mins = Math.floor(item.time / 60);
+            const secs = Math.floor(item.time % 60);
+            const optimizedUrl = video.filename.replace('/upload/', '/upload/f_auto,q_auto/');
+            card.innerHTML = `
+                <video src="${optimizedUrl}" poster="${video.thumbnail || ''}" style="pointer-events:none;"></video>
+                <h3>${video.title}</h3>
+                <div class="meta">继续从 ${mins}分${secs}秒 观看</div>
+            `;
+            card.addEventListener('click', function() {
+                window.location.href = '/video.html?id=' + video.id;
+            });
+            container.appendChild(card);
+        } catch (err) {
+            // 如果视频已被删除，清除无效记录
+            localStorage.removeItem('l0ks_video_' + item.id);
+        }
+    });
+}
 
         // ========== 检查登录状态（含头像） ==========
         async function checkLogin() {

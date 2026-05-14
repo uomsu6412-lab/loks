@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>视频详情 - L0Ks</title>
-    <link rel="icon" href="data:image/svg+xml,...🎬</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
     <link rel="manifest" href="/manifest.json">
     <style>
         :root { --bg-start: #0a0a1a; --bg-end: #1a1a3e; --accent: #e94560; --text: #e0e0e0; }
@@ -15,12 +15,14 @@
         h1 { margin: 16px 0 8px; }
         .meta { color: #a0a0b0; font-size: 0.9rem; }
         .meta span { margin-right: 16px; }
+        .progress-info { color: var(--accent); font-size: 0.9rem; margin: 10px 0; }
     </style>
 </head>
 <body>
     <a href="/L0Ks.html" class="back-link">← 返回列表</a>
     <div class="video-container">
         <video id="videoPlayer" controls></video>
+        <div class="progress-info" id="progressInfo"></div>
         <h1 id="videoTitle"></h1>
         <div class="meta">
             <span id="videoUploader"></span>
@@ -28,22 +30,62 @@
             <span id="videoDate"></span>
         </div>
     </div>
+
     <script>
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
-        if (!id) { document.body.innerHTML = '<h2>缺少视频ID</h2>'; }
-        else {
+        const videoEl = document.getElementById('videoPlayer');
+
+        if (!id) {
+            document.body.innerHTML = '<h2>缺少视频ID</h2>';
+        } else {
             fetch('/api/videos/' + id)
                 .then(res => res.json())
                 .then(video => {
                     document.title = video.title + ' - L0Ks';
-                    document.getElementById('videoPlayer').src = video.filename.replace('/upload/', '/upload/f_auto,q_auto/');
+                    videoEl.src = video.filename.replace('/upload/', '/upload/f_auto,q_auto/');
                     document.getElementById('videoTitle').textContent = video.title;
                     document.getElementById('videoUploader').textContent = '上传者：' + video.uploaded_by;
                     document.getElementById('videoCategory').textContent = '分类：' + (video.category || '其他');
                     document.getElementById('videoDate').textContent = '上传时间：' + new Date(video.created_at).toLocaleString();
+
+                    // ========== 断点续播逻辑 ==========
+                    const storageKey = 'l0ks_video_' + id;
+                    const savedTime = localStorage.getItem(storageKey);
+
+                    // 视频元数据加载完成后，恢复进度
+                    videoEl.addEventListener('loadedmetadata', function() {
+                        if (savedTime && parseFloat(savedTime) > 5) {
+                            videoEl.currentTime = parseFloat(savedTime);
+                            const mins = Math.floor(savedTime / 60);
+                            const secs = Math.floor(savedTime % 60);
+                            document.getElementById('progressInfo').textContent = `📍 已恢复上次播放进度：${mins}分${secs}秒`;
+                        }
+                    });
+
+                    // 每 10 秒自动保存进度
+                    setInterval(function() {
+                        if (!videoEl.paused && videoEl.currentTime > 0) {
+                            localStorage.setItem(storageKey, videoEl.currentTime);
+                        }
+                    }, 10000);
+
+                    // 暂停时也保存一次
+                    videoEl.addEventListener('pause', function() {
+                        if (videoEl.currentTime > 0) {
+                            localStorage.setItem(storageKey, videoEl.currentTime);
+                        }
+                    });
+
+                    // 视频播放结束时清除进度
+                    videoEl.addEventListener('ended', function() {
+                        localStorage.removeItem(storageKey);
+                        document.getElementById('progressInfo').textContent = '✅ 已看完';
+                    });
                 })
-                .catch(() => { document.body.innerHTML = '<h2>视频加载失败</h2>'; });
+                .catch(() => {
+                    document.body.innerHTML = '<h2>视频加载失败</h2>';
+                });
         }
     </script>
 </body>
