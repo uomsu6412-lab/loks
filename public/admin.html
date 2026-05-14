@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - L0Ks</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+    <style>
+        :root { --bg-start: #0a0a1a; --accent: #e94560; --text: #e0e0e0; --card-bg: rgba(22,33,62,0.85); }
+        body {
+            font-family: 'Segoe UI', '微软雅黑', sans-serif;
+            background: linear-gradient(135deg, var(--bg-start), #1a1a3e);
+            color: var(--text); padding: 20px; max-width: 1000px; margin: 0 auto;
+        }
+        .back-link { color: var(--accent); text-decoration: none; margin-bottom: 20px; display: inline-block; }
+        .tabs { display: flex; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .tabs span {
+            cursor: pointer; font-weight: 600; color: var(--text-secondary);
+            padding-bottom: 4px; transition: color 0.2s;
+        }
+        .tabs span.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; }
+        th { color: var(--text-secondary); font-weight: 600; }
+        .btn { padding: 4px 12px; border-radius: 15px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+        .btn-delete { background: var(--accent); color: white; }
+        .btn:hover { opacity: 0.9; }
+        .msg { margin-top: 10px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <a href="/L0Ks.html" class="back-link">← 返回首页</a>
+    <h1>🛡️ 管理后台</h1>
+
+    <div class="tabs">
+        <span class="active" data-tab="users">👥 用户管理</span>
+        <span data-tab="videos">🎬 视频管理</span>
+    </div>
+
+    <!-- 用户管理面板 -->
+    <div class="panel active" id="usersPanel">
+        <table>
+            <thead><tr><th>头像</th><th>用户名</th><th>昵称</th><th>管理员</th><th>注册时间</th></tr></thead>
+            <tbody id="usersTableBody"></tbody>
+        </table>
+        <div class="msg" id="usersMsg"></div>
+    </div>
+
+    <!-- 视频管理面板 -->
+    <div class="panel" id="videosPanel">
+        <table>
+            <thead><tr><th>标题</th><th>上传者</th><th>分类</th><th>操作</th></tr></thead>
+            <tbody id="videosTableBody"></tbody>
+        </table>
+        <div class="msg" id="videosMsg"></div>
+    </div>
+
+    <script>
+        // 选项卡切换
+        document.querySelectorAll('.tabs span').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tabs span').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                const target = this.dataset.tab;
+                document.getElementById('usersPanel').classList.remove('active');
+                document.getElementById('videosPanel').classList.remove('active');
+                if (target === 'users') {
+                    document.getElementById('usersPanel').classList.add('active');
+                    loadUsers();
+                } else {
+                    document.getElementById('videosPanel').classList.add('active');
+                    loadVideos();
+                }
+            });
+        });
+
+        // 加载用户列表
+        async function loadUsers() {
+            try {
+                const resp = await fetch('/api/admin/users');
+                if (resp.status === 403) {
+                    document.getElementById('usersMsg').textContent = '❌ 需要管理员权限';
+                    return;
+                }
+                const users = await resp.json();
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = users.map(u => `
+                    <tr>
+                        <td>${u.avatar ? '<img src="'+u.avatar+'" style="width:24px;height:24px;border-radius:50%;">' : '👤'}</td>
+                        <td>${u.username}</td>
+                        <td>${u.nickname || '-'}</td>
+                        <td>${u.is_admin ? '✅' : '❌'}</td>
+                        <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                document.getElementById('usersMsg').textContent = '加载失败';
+            }
+        }
+
+        // 加载视频列表
+        async function loadVideos() {
+            try {
+                const resp = await fetch('/api/admin/videos');
+                if (resp.status === 403) {
+                    document.getElementById('videosMsg').textContent = '❌ 需要管理员权限';
+                    return;
+                }
+                const videos = await resp.json();
+                const tbody = document.getElementById('videosTableBody');
+                tbody.innerHTML = videos.map(v => `
+                    <tr>
+                        <td><a href="/video.html?id=${v.id}" target="_blank">${v.title}</a></td>
+                        <td>${v.uploaded_by}</td>
+                        <td>${v.category || '其他'}</td>
+                        <td><button class="btn btn-delete" onclick="deleteVideo(${v.id})">删除</button></td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                document.getElementById('videosMsg').textContent = '加载失败';
+            }
+        }
+
+        // 管理员强制删除视频
+        async function deleteVideo(id) {
+            if (!confirm('管理员强制删除，确定吗？')) return;
+            const resp = await fetch('/api/admin/videos/' + id, { method: 'DELETE' });
+            if (resp.ok) {
+                loadVideos();
+            } else {
+                alert('删除失败：' + await resp.text());
+            }
+        }
+
+        // 初始加载用户列表
+        loadUsers();
+    </script>
+</body>
+</html>

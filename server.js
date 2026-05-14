@@ -50,6 +50,7 @@ const pool = new Pool({
     await pool.query("ALTER TABLE videos ADD COLUMN IF NOT EXISTS category TEXT DEFAULT '其他';");
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname TEXT;');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;');
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;');
     console.log('数据库已连接');
   } catch (err) {
     console.error('数据库初始化失败:', err.message);
@@ -94,6 +95,20 @@ function csrfProtection(req, res, next) {
     return res.status(403).send('CSRF 令牌无效');
   }
   next();
+}
+// ==================== 管理员验证中间件 ====================
+async function adminRequired(req, res, next) {
+  if (!req.cookies.user) return res.status(401).send('请先登录');
+  try {
+    const result = await pool.query('SELECT is_admin FROM users WHERE username = $1', [req.cookies.user]);
+    if (result.rows.length === 0 || !result.rows[0].is_admin) {
+      return res.status(403).send('需要管理员权限');
+    }
+    next();
+  } catch (err) {
+    console.error('管理员验证失败:', err.message);
+    res.status(500).send('服务器错误');
+  }
 }
 
 // ==================== 10. 首页重定向 ====================
@@ -272,7 +287,70 @@ app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
     res.status(500).send('删除失败');
   }
 });
+// ==================== 临时：将当前登录用户设为管理员 ====================
+app.get('/make-me-admin', async (req, res) => {
+  if (!req.cookies.user) return res.send('请先登录');
+  try {
+    await pool.query('UPDATE users SET is_admin = true WHERE username = $1', [req.cookies.user]);
+    res.send('管理员权限已开启！你现在可以访问 /admin.html 了。');
+  } catch (err) {
+    console.error('设置管理员失败:', err.message);
+    res.send('设置失败，请重试');
+  }
+});
+// ==================== 管理后台 API ====================
 
+// 获取所有用户（管理员专属）
+app.get('/api/admin/users', adminRequired, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, username, nickname, avatar, is_admin, created_at FROM users ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('获取用户列表失败:', err.message);
+    res.status(500).json({ error: '获取用户列表失败' });
+  }
+});
+
+// 获取所有视频（管理员专属）
+app.get('/api/admin/videos', adminRequired, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM videos ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('获取视频列表失败:', err.message);
+    res.status(500).json({ error: '获取视频列表失败' });
+  }
+});
+
+// 强制删除视频（管理员专属）
+app.delete('/api/admin/videos/:id', adminRequired, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM videos WHERE id = $1', [id]);
+    const video = result.rows[0];
+    if (!video) return res.status(404).send('视频不存在');
+
+    if (video.public_id) {
+      try {
+        await cloudinary.uploader.destroy(video.public_id, {
+          resource_type: 'video',
+          api_key: CLOUDINARY_API_KEY,
+          api_secret: CLOUDINARY_API_SECRET,
+          cloud_name: CLOUDINARY_CLOUD_NAME,
+        });
+        console.log('管理员已删除 Cloudinary 视频:', video.public_id);
+      } catch (cloudErr) {
+        console.error('Cloudinary 删除失败:', cloudErr);
+      }
+    }
+
+    await pool.query('DELETE FROM videos WHERE id = $1', [id]);
+    res.send('删除成功');
+  } catch (err) {
+    console.error('管理员删除失败:', err.message);
+    res.status(500).send('删除失败');
+  }
+});
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   const cookieToken = req.cookies.csrf_token;
   const bodyToken = req.body._csrf;
