@@ -4,23 +4,16 @@ const cookieParser = require('cookie-parser');
 const { Pool } = require('pg');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const path = require('path');
-const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
+const { Readable } = require('stream');
 
 const app = express();
 
 // ---- Cloudinary 配置 ----
-try {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
-  console.log('Cloudinary 配置成功');
-} catch (err) {
-  console.error('Cloudinary 配置失败:', err.message);
-}
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // ---- 数据库连接（PostgreSQL） ----
 const pool = new Pool({
@@ -59,14 +52,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---- 文件上传配置（磁盘临时存储） ----
-const storage = multer.diskStorage({
-  destination: '/tmp/',
-  filename: (req, file, cb) => {
-    cb(null, uuidv4() + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage });
+// ---- multer 内存存储（不写磁盘） ----
+const upload = multer({ storage: multer.memoryStorage() });
 
 // ---- 中间件 ----
 app.use(express.urlencoded({ extended: false }));
@@ -150,9 +137,8 @@ app.get('/api/videos', async (req, res) => {
   }
 });
 
-// 上传视频（磁盘临时存储 → Cloudinary → 删除临时文件）
+// 上传视频（内存缓冲 → Cloudinary 流式上传）
 app.post('/api/upload', upload.single('video'), async (req, res) => {
-  // 手动 CSRF 检查
   const cookieToken = req.cookies.csrf_token;
   const bodyToken = req.body._csrf;
   if (!cookieToken || !bodyToken || cookieToken !== bodyToken) {
@@ -160,28 +146,48 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
   }
   if (!req.cookies.user) return res.status(401).send('请先登录');
 
+  if (!req.file) {
+    return res.status(400).send('未接收到视频文件');
+  }
+
   const { title } = req.body;
+
   try {
-  const result = await cloudinary.uploader.upload(req.file.path, {
-  resource_type: 'video',
-  folder: 'loks-videos',
-  transformation: [{ quality: 'auto' }],
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME
-});
-    const videoUrl = result.secure_url;
+    // 用 Promise 包装 upload_stream
+    const uploaded = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'video',
+          folder: 'loks-videos',
+          transformation: [{ quality: 'auto' }],
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      );
 
-    // 删除本地临时文件
-    fs.unlinkSync(req.file.path);
+      // 将内存 buffer 转为可读流，喂给 Cloudinary
+      const readableStream = new Readable();
+      readableStream.push(req.file.buffer);
+      readableStream.push(null);
+      readableStream.pipe(stream);
+    });
 
-    await pool.query('INSERT INTO videos (title, filename, uploaded_by) VALUES ($1, $2, $3)',
-      [title, videoUrl, req.cookies.user]);
+    const videoUrl = uploaded.secure_url;
+
+    await pool.query(
+      'INSERT INTO videos (title, filename, uploaded_by) VALUES ($1, $2, $3)',
+      [title, videoUrl, req.cookies.user]
+    );
+
     res.redirect('/L0Ks.html');
   } catch (err) {
-    console.error('上传失败详情:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+    console.error('上传失败:', err.message);
     if (err.error) console.error('Cloudinary 错误:', err.error);
-    try { if (req.file && req.file.path) fs.unlinkSync(req.file.path); } catch (e) {}
     res.send('上传失败，请稍后重试');
   }
 });
@@ -189,13 +195,11 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
 // ---- 全局错误捕获 ----
 process.on('uncaughtException', (err) => {
   console.error('未捕获的异常:', err.message, err.stack);
-  process.exit(1);
 });
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('未处理的 Promise 拒绝:', reason);
 });
 
-console.log('即将启动服务器...');
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log('私人番剧站已启动 → 端口 ' + port);
