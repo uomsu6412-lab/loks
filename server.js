@@ -316,9 +316,9 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
       folder: 'loks-videos',
       transformation: [{ quality: 'auto' }],
       public_id: uuidv4(),
-      api_key: CLOUDINARY_API_KEY,       // 显式传入凭据
-      api_secret: CLOUDINARY_API_SECRET,
-      cloud_name: CLOUDINARY_CLOUD_NAME,
+      api_key: '923574445472679',
+      api_secret: 'yUYJYLx-hI0kvYjTVfjG2rLOpYc',
+      cloud_name: 'dyh7g2qu5',
       chunk_size: 6000000,
       eager: [{ format: 'jpg', width: 320, height: 180, crop: 'fill' }],
       eager_async: false,
