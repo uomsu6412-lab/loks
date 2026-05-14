@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎬 L0Ks - 私人番剧站</title>
-    <link rel="icon" href="data:image/svg+xml,...🎬</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
     <link rel="manifest" href="/manifest.json">
     <!-- Google Analytics 预留 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
@@ -30,7 +30,41 @@
             10% { opacity: 1; } 90% { opacity: 1; }
             100% { transform: translateY(-10vh) scale(1); opacity: 0; }
         }
-        /* 导航栏 */
+
+        /* ---------- Toast 提示 ---------- */
+        .toast-container {
+            position: fixed; top: 20px; right: 20px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+            color: white; padding: 12px 24px; border-radius: 30px;
+            font-size: 0.9rem; animation: toastIn 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+            max-width: 300px; word-break: break-word;
+        }
+        .toast.success { border-color: #00b894; }
+        .toast.error { border-color: #e94560; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* ---------- 骨架屏 ---------- */
+        .skeleton-card {
+            background: var(--card-bg); border-radius: 20px; padding: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            animation: pulse 1.5s infinite;
+        }
+        .skeleton-thumb {
+            width: 100%; aspect-ratio: 16/9; background: rgba(255,255,255,0.05);
+            border-radius: 12px; margin-bottom: 12px;
+        }
+        .skeleton-text {
+            height: 16px; background: rgba(255,255,255,0.05); border-radius: 8px;
+            margin-bottom: 8px; width: 60%;
+        }
+        .skeleton-text.short { width: 40%; }
+        @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+        /* ---------- 导航栏 ---------- */
         .navbar {
             position: sticky; top: 0; z-index: 100;
             background: var(--nav-bg); backdrop-filter: blur(16px);
@@ -74,7 +108,9 @@
         .search-box button:hover, .navbar select:hover, .btn:hover { transform: scale(1.05); }
         .btn-auth { background: linear-gradient(135deg, var(--accent), #c0392b); }
         .btn-upload-nav { background: linear-gradient(135deg, #00b894, #0984e3); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
+        /* ---------- 主内容区 ---------- */
         .main-content { position: relative; z-index: 1; padding: 20px 24px 60px; }
         .section-title { font-size: 1.5rem; margin: 0 0 20px; color: var(--text); }
         .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
@@ -101,7 +137,7 @@
         }
         .card .delete-btn:hover { transform: scale(1.05); }
 
-        /* 模态框 */
+        /* ---------- 模态框 ---------- */
         .modal {
             display: none; position: fixed; z-index: 200; left: 0; top: 0;
             width: 100%; height: 100%; background: rgba(0,0,0,0.7);
@@ -141,11 +177,18 @@
         .form-panel { display: none; }
         .form-panel.active { display: block; }
 
-        .empty-state { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
-        .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.6; }
+        /* ---------- 空状态 ---------- */
+        .empty-state {
+            text-align: center; padding: 80px 20px; color: var(--text-secondary);
+        }
+        .empty-state svg { width: 80px; height: 80px; margin-bottom: 20px; opacity: 0.6; }
+        .empty-state p { font-size: 1rem; }
     </style>
 </head>
 <body>
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="particles" id="particles"></div>
 
     <!-- 顶部导航栏 -->
@@ -177,12 +220,10 @@
     <div class="main-content">
         <div class="section-title">📺 番剧列表</div>
         <div class="card-grid" id="videoContainer">
-            <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M15.75 10.5l4.72-4.72..."/>
-                </svg>
-                <p>还没有人分享片源，成为第一个吧！</p>
-            </div>
+            <!-- 骨架屏占位，加载时显示 -->
+            <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-text"></div><div class="skeleton-text short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-text"></div><div class="skeleton-text short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-text"></div><div class="skeleton-text short"></div></div>
         </div>
     </div>
 
@@ -237,7 +278,7 @@
                 <span id="videoDuration" style="color: #a0a0b0; font-size: 0.85rem;"></span>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" onclick="closeUploadModal()">取消</button>
-                    <button type="submit" class="btn-primary">上传</button>
+                    <button type="submit" class="btn-primary" id="uploadSubmitBtn">上传</button>
                 </div>
             </form>
             <div id="uploadMsg" style="margin-top: 10px;"></div>
@@ -245,7 +286,17 @@
     </div>
 
     <script>
-        // 粒子动画
+        // ========== 全局 Toast ==========
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 2500);
+        }
+
+        // ========== 粒子动画 ==========
         (function() {
             const container = document.getElementById('particles');
             for (let i = 0; i < 40; i++) {
@@ -258,7 +309,7 @@
             }
         })();
 
-        // 工具函数
+        // ========== 工具函数 ==========
         function getCsrfToken() {
             var match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
             return match ? match[1] : '';
@@ -270,7 +321,7 @@
             document.getElementById('csrfInputUpload').value = token;
         }
 
-        // 模态框
+        // ========== 模态框 ==========
         const authModal = document.getElementById('authModal');
         const uploadModal = document.getElementById('uploadModal');
         function openAuthModal() { authModal.classList.add('open'); fillCsrf(); }
@@ -282,7 +333,7 @@
             if (e.target === uploadModal) closeUploadModal();
         });
 
-        // 选项卡
+        // ========== 选项卡 ==========
         document.querySelectorAll('.tabs span').forEach(tab => {
             tab.addEventListener('click', function() {
                 document.querySelectorAll('.tabs span').forEach(t => t.classList.remove('active'));
@@ -295,10 +346,10 @@
             });
         });
 
-        // 初始化
+        // ========== 初始化 ==========
         window.addEventListener('DOMContentLoaded', function() { fillCsrf(); checkLogin(); loadVideos(); });
 
-        // 检查登录状态（含头像加载）
+        // ========== 检查登录状态（含头像） ==========
         async function checkLogin() {
             var response = await fetch('/api/user');
             var data = await response.json();
@@ -338,16 +389,21 @@
             }
         }
 
-        // 加载视频列表
+        // ========== 加载视频列表 ==========
         async function loadVideos(category) {
             var url = '/api/videos';
             if (category && category !== '全部') url += '?category=' + encodeURIComponent(category);
             var response = await fetch(url);
             var videos = await response.json();
             var container = document.getElementById('videoContainer');
-            container.innerHTML = '';
+            container.innerHTML = ''; // 清除骨架屏
             if (videos.length === 0) {
-                container.innerHTML = '<div class="empty-state">...</div>';
+                container.innerHTML = `<div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <p>还没有人分享片源，成为第一个吧！</p>
+                </div>`;
                 return;
             }
             videos.forEach(function(v) {
@@ -365,7 +421,7 @@
             });
         }
 
-        // 删除视频
+        // ========== 删除视频 ==========
         async function deleteVideo(id) {
             if (!confirm('确定删除？')) return;
             var resp = await fetch('/api/videos/' + id + '/delete', {
@@ -373,14 +429,19 @@
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ _csrf: getCsrfToken() }).toString()
             });
-            if (resp.ok) loadVideos(document.getElementById('categoryFilter').value);
+            if (resp.ok) {
+                showToast('删除成功');
+                loadVideos(document.getElementById('categoryFilter').value);
+            } else {
+                showToast('删除失败：' + await resp.text(), 'error');
+            }
         }
 
-        // 搜索与分类
+        // ========== 搜索与分类 ==========
         document.getElementById('searchBtn').addEventListener('click', () => loadVideos(document.getElementById('categoryFilter').value));
         document.getElementById('categoryFilter').addEventListener('change', function() { loadVideos(this.value); });
 
-        // 登录
+        // ========== 登录 ==========
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var resp = await fetch('/login', {
@@ -388,11 +449,19 @@
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ username: document.getElementById('loginUsername').value, password: document.getElementById('loginPassword').value, _csrf: getCsrfToken() }).toString()
             });
-            document.getElementById('loginMsg').textContent = await resp.text();
-            if (resp.ok) { closeAuthModal(); checkLogin(); loadVideos(); }
+            var msg = await resp.text();
+            document.getElementById('loginMsg').textContent = msg;
+            if (msg === '登录成功！') {
+                showToast('登录成功');
+                closeAuthModal();
+                checkLogin();
+                loadVideos();
+            } else {
+                showToast(msg, 'error');
+            }
         });
 
-        // 注册
+        // ========== 注册 ==========
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var resp = await fetch('/register', {
@@ -400,11 +469,17 @@
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ username: document.getElementById('regUsername').value, password: document.getElementById('regPassword').value, _csrf: getCsrfToken() }).toString()
             });
-            document.getElementById('registerMsg').textContent = await resp.text();
-            if (await resp.text() === '注册成功！') document.querySelector('.tabs span[data-tab="login"]').click();
+            var msg = await resp.text();
+            document.getElementById('registerMsg').textContent = msg;
+            if (msg === '注册成功！') {
+                showToast('注册成功，请登录');
+                document.querySelector('.tabs span[data-tab="login"]').click();
+            } else {
+                showToast(msg, 'error');
+            }
         });
 
-        // 上传（多文件）
+        // ========== 上传视频（带进度指示） ==========
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var files = document.getElementById('videoFile').files;
@@ -412,6 +487,9 @@
             var title = document.getElementById('videoTitle').value;
             var category = document.getElementById('videoCategory').value;
             var csrfToken = document.getElementById('csrfInputUpload').value;
+            var submitBtn = document.getElementById('uploadSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '上传中...';
 
             for (var i = 0; i < files.length; i++) {
                 var formData = new FormData();
@@ -419,12 +497,19 @@
                 formData.append('category', category);
                 formData.append('video', files[i]);
                 formData.append('_csrf', csrfToken);
-                await fetch('/api/upload', { method: 'POST', body: formData });
+                var resp = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (!resp.redirected) {
+                    var msg = await resp.text();
+                    showToast('上传失败：' + msg, 'error');
+                }
             }
+            submitBtn.disabled = false;
+            submitBtn.textContent = '上传';
+            showToast('上传完成');
             window.location.href = '/L0Ks.html';
         });
 
-        // 显示视频时长
+        // ========== 显示视频时长 ==========
         document.getElementById('videoFile').addEventListener('change', function() {
             var file = this.files[0]; if (!file) return;
             var v = document.createElement('video'); v.preload = 'metadata';
@@ -436,7 +521,7 @@
             v.src = URL.createObjectURL(file);
         });
 
-        // 导航栏按钮绑定
+        // ========== 导航栏按钮绑定 ==========
         document.getElementById('btnAuth').addEventListener('click', openAuthModal);
         document.getElementById('btnUploadNav').addEventListener('click', openUploadModal);
     </script>
