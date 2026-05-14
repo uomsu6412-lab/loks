@@ -6,49 +6,20 @@
   <title>视频详情 - L0Ks</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
   <style>
-    :root {
-      --bg-start: #0a0a1a;
-      --bg-end: #1a1a3e;
-      --accent: #e94560;
-      --text: #e0e0e0;
-    }
+    :root { --bg-start: #0a0a1a; --bg-end: #1a1a3e; --accent: #e94560; --text: #e0e0e0; }
     body {
-      margin: 0;
-      padding: 20px;
+      margin: 0; padding: 20px;
       font-family: 'Segoe UI', '微软雅黑', sans-serif;
       background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
-      color: var(--text);
-      min-height: 100vh;
+      color: var(--text); min-height: 100vh;
     }
-    .back-link {
-      display: inline-block;
-      margin-bottom: 20px;
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
+    .back-link { display: inline-block; margin-bottom: 20px; color: var(--accent); text-decoration: none; font-size: 0.9rem; }
     .back-link:hover { text-decoration: underline; }
-    .video-container {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    video {
-      width: 100%;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    }
-    h1 {
-      margin: 16px 0 8px;
-      font-size: 1.8rem;
-    }
-    .meta {
-      color: #a0a0b0;
-      font-size: 0.9rem;
-      margin-bottom: 16px;
-    }
-    .meta span {
-      margin-right: 16px;
-    }
+    .video-container { max-width: 900px; margin: 0 auto; }
+    video { width: 100%; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+    h1 { margin: 16px 0 8px; font-size: 1.8rem; }
+    .meta { color: #a0a0b0; font-size: 0.9rem; margin-bottom: 16px; }
+    .meta span { margin-right: 16px; }
   </style>
 </head>
 <body>
@@ -73,7 +44,9 @@
         .then(res => res.json())
         .then(video => {
           document.title = video.title + ' - L0Ks';
-          document.getElementById('videoPlayer').src = video.filename;
+          // 自动优化视频链接
+          var optimizedUrl = video.filename.replace('/upload/', '/upload/f_auto,q_auto/');
+          document.getElementById('videoPlayer').src = optimizedUrl;
           document.getElementById('videoTitle').textContent = video.title;
           document.getElementById('videoUploader').textContent = '上传者：' + video.uploaded_by;
           document.getElementById('videoCategory').textContent = '分类：' + (video.category || '其他');

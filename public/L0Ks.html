@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎬 L0Ks - 私人番剧站</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
     <style>
         :root {
             --bg-start: #0a0a1a;
@@ -59,227 +67,114 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-        .navbar-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .navbar-left { display: flex; align-items: center; gap: 12px; }
         .navbar-logo {
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-size: 1.5rem; font-weight: bold;
             background: linear-gradient(135deg, var(--accent), var(--accent2));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .navbar-user {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-        .navbar-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .navbar .search-box {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .navbar .search-box input {
-            width: 160px;
-            padding: 8px 14px;
-            border-radius: 20px;
+        .navbar-user { font-size: 0.9rem; color: var(--text-secondary); }
+        .navbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .search-box { display: flex; align-items: center; gap: 6px; }
+        .search-box input {
+            width: 160px; padding: 8px 14px; border-radius: 20px;
             border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(0,0,0,0.4);
-            color: white;
-            font-size: 0.9rem;
-            outline: none;
-            transition: border-color 0.2s;
+            background: rgba(0,0,0,0.4); color: white; font-size: 0.9rem;
+            outline: none; transition: border-color 0.2s;
         }
-        .navbar .search-box input:focus { border-color: var(--accent); }
-        .navbar .search-box input::placeholder { color: #888; }
-        .navbar .search-box button, .navbar select {
-            padding: 8px 16px;
-            border-radius: 20px;
-            background: rgba(0,0,0,0.4);
-            color: white;
+        .search-box input:focus { border-color: var(--accent); }
+        .search-box input::placeholder { color: #888; }
+        .search-box button, .navbar select, .btn {
+            padding: 8px 16px; border-radius: 20px;
+            background: rgba(0,0,0,0.4); color: white;
             border: 1px solid rgba(255,255,255,0.15);
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
-            transition: transform 0.2s;
-            outline: none;
+            cursor: pointer; font-size: 0.85rem; font-weight: 600;
+            transition: transform 0.2s; outline: none;
         }
-        .navbar .search-box button { background: var(--accent); border: none; }
-        .navbar .search-box button:hover, .navbar select:hover { transform: scale(1.05); }
+        .search-box button { background: var(--accent); border: none; }
+        .search-box button:hover, .navbar select:hover, .btn:hover { transform: scale(1.05); }
+        .btn-auth { background: linear-gradient(135deg, var(--accent), #c0392b); }
+        .btn-upload-nav { background: linear-gradient(135deg, #00b894, #0984e3); }
+        .btn-profile { background: rgba(255,255,255,0.2); border: none; }
 
-        .btn {
-            padding: 8px 18px;
-            border-radius: 20px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.85rem;
-            transition: transform 0.2s;
-        }
-        .btn:hover { transform: scale(1.05); }
-        .btn-auth { background: linear-gradient(135deg, var(--accent), #c0392b); color: white; }
-        .btn-upload-nav { background: linear-gradient(135deg, #00b894, #0984e3); color: white; }
-
-        /* 主内容区 */
-        .main-content {
-            position: relative;
-            z-index: 1;
-            padding: 20px 24px 60px;
-        }
-        .section-title {
-            font-size: 1.5rem;
-            margin: 0 0 20px;
-            color: var(--text);
-        }
+        .main-content { position: relative; z-index: 1; padding: 20px 24px 60px; }
+        .section-title { font-size: 1.5rem; margin: 0 0 20px; color: var(--text); }
         .card-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 24px;
         }
         .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            border-radius: 20px;
-            padding: 16px;
+            background: var(--card-bg); backdrop-filter: blur(12px);
+            border-radius: 20px; padding: 16px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            cursor: pointer;
+            transition: all 0.3s ease; cursor: pointer;
+            display: flex; flex-direction: column;
         }
         .card:hover {
             transform: translateY(-6px);
             box-shadow: 0 16px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(233,69,96,0.3);
         }
         .card video, .card img {
-            width: 100%;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            background: #000;
-            aspect-ratio: 16/9;
-            object-fit: cover;
+            width: 100%; border-radius: 12px; margin-bottom: 12px;
+            background: #000; aspect-ratio: 16/9; object-fit: cover;
         }
-        .card h3 {
-            font-size: 1.1rem;
-            margin: 0 0 6px;
-            color: white;
-        }
-        .card .meta {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-top: auto;
-        }
+        .card h3 { font-size: 1.1rem; margin: 0 0 6px; color: white; }
+        .card .meta { font-size: 0.8rem; color: var(--text-secondary); margin-top: auto; }
         .card .delete-btn {
-            background: #e94560;
-            color: white;
-            border: none;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            margin-top: 8px;
-            transition: transform 0.2s;
-            z-index: 2;
-            position: relative;
+            background: #e94560; color: white; border: none;
+            padding: 4px 12px; border-radius: 15px; font-size: 0.8rem;
+            cursor: pointer; margin-top: 8px; transition: transform 0.2s;
+            z-index: 2; position: relative;
         }
         .card .delete-btn:hover { transform: scale(1.05); }
 
         /* 模态框 */
         .modal {
-            display: none;
-            position: fixed;
-            z-index: 200;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(6px);
-            justify-content: center;
-            align-items: center;
+            display: none; position: fixed; z-index: 200;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+            justify-content: center; align-items: center;
         }
         .modal.open { display: flex; }
         .modal-content {
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            padding: 30px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 16px 48px rgba(0,0,0,0.6);
-            color: white;
+            background: var(--card-bg); backdrop-filter: blur(20px);
+            border-radius: 24px; padding: 30px; width: 100%;
+            max-width: 400px; box-shadow: 0 16px 48px rgba(0,0,0,0.6); color: white;
         }
-        .modal-content h3 {
-            margin-bottom: 16px;
-            font-size: 1.3rem;
-        }
+        .modal-content h3 { margin-bottom: 16px; font-size: 1.3rem; }
         .modal-content input, .modal-content select {
-            display: block;
-            width: 100%;
-            margin: 8px 0 16px;
-            padding: 10px 14px;
-            border-radius: 10px;
+            display: block; width: 100%; margin: 8px 0 16px;
+            padding: 10px 14px; border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(0,0,0,0.35);
-            color: white;
-            font-size: 0.95rem;
+            background: rgba(0,0,0,0.35); color: white; font-size: 0.95rem;
         }
         .modal-content input::placeholder { color: #888; }
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         .modal-actions button {
-            padding: 8px 20px;
-            border-radius: 20px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
+            padding: 8px 20px; border-radius: 20px; border: none;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem;
             transition: transform 0.2s;
         }
         .modal-actions button:hover { transform: scale(1.05); }
         .btn-primary { background: var(--accent); color: white; }
         .btn-secondary { background: rgba(255,255,255,0.15); color: white; }
         .tabs {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 8px;
+            display: flex; gap: 12px; margin-bottom: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;
         }
         .tabs span {
-            cursor: pointer;
-            font-weight: 600;
-            color: var(--text-secondary);
-            padding-bottom: 4px;
-            transition: color 0.2s;
+            cursor: pointer; font-weight: 600; color: var(--text-secondary);
+            padding-bottom: 4px; transition: color 0.2s;
         }
-        .tabs span.active {
-            color: var(--accent);
-            border-bottom: 2px solid var(--accent);
-        }
+        .tabs span.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
         .form-panel { display: none; }
         .form-panel.active { display: block; }
 
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-secondary);
-        }
-        .empty-state svg {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 16px;
-            opacity: 0.6;
-        }
+        .empty-state { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
+        .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.6; }
     </style>
 </head>
 <body>
@@ -296,7 +191,6 @@
                 <input type="text" id="searchInput" placeholder="搜索视频...">
                 <button id="searchBtn">搜索</button>
             </div>
-            <!-- 分类筛选下拉 -->
             <select id="categoryFilter">
                 <option value="全部">全部分类</option>
                 <option value="动漫">动漫</option>
@@ -306,6 +200,7 @@
             </select>
             <button id="btnAuth" class="btn btn-auth">登录 / 注册</button>
             <button id="btnUploadNav" class="btn btn-upload-nav" style="display: none;">📤 上传</button>
+            <a href="/profile.html" id="btnProfile" class="btn btn-profile" style="display: none;">👤 我的</a>
         </div>
     </nav>
 
@@ -363,7 +258,6 @@
             <form id="uploadForm" enctype="multipart/form-data">
                 <input type="hidden" id="csrfInputUpload" name="_csrf">
                 <input id="videoTitle" name="title" placeholder="片名">
-                <!-- 分类选择 -->
                 <select id="videoCategory" name="category">
                     <option value="动漫">动漫</option>
                     <option value="电影">电影</option>
@@ -371,6 +265,7 @@
                     <option value="其他">其他</option>
                 </select>
                 <input type="file" id="videoFile" name="videos" accept="video/*" multiple>
+                <span id="videoDuration" style="color: #a0a0b0; font-size: 0.85rem; margin-top: 4px;"></span>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" onclick="closeUploadModal()">取消</button>
                     <button type="submit" class="btn-primary">上传</button>
@@ -447,20 +342,23 @@
             var navbarUser = document.getElementById('navbarUser');
             var btnAuth = document.getElementById('btnAuth');
             var btnUploadNav = document.getElementById('btnUploadNav');
+            var btnProfile = document.getElementById('btnProfile');
             if (data.username) {
                 window.currentUser = data.username;
                 navbarUser.textContent = '👤 ' + data.username;
                 btnAuth.style.display = 'none';
                 btnUploadNav.style.display = 'inline-block';
+                btnProfile.style.display = 'inline-block';
             } else {
                 window.currentUser = null;
                 navbarUser.textContent = '未登录';
                 btnAuth.style.display = 'inline-block';
                 btnUploadNav.style.display = 'none';
+                btnProfile.style.display = 'none';
             }
         }
 
-        // ========== 加载视频列表（支持分类） ==========
+        // ========== 加载视频列表（支持分类、自动优化URL） ==========
         async function loadVideos(category) {
             var url = '/api/videos';
             if (category && category !== '全部') url += '?category=' + encodeURIComponent(category);
@@ -483,12 +381,14 @@
                 card.dataset.videoId = v.id;
                 var isOwner = (window.currentUser && v.uploaded_by === window.currentUser);
                 var deleteBtnHtml = isOwner ? `<button class="delete-btn">🗑 删除</button>` : '';
-                card.innerHTML = '<video controls src="' + v.filename + '" poster="' + (v.thumbnail || '') + '"></video>' +
+                // Cloudinary 自动优化链接
+                var optimizedUrl = v.filename.replace('/upload/', '/upload/f_auto,q_auto/');
+                card.innerHTML = '<video controls src="' + optimizedUrl + '" poster="' + (v.thumbnail || '') + '"></video>' +
                                  '<h3>' + v.title + '</h3>' +
                                  '<div class="meta">上传者：' + v.uploaded_by + ' | 分类：' + (v.category || '其他') + '</div>' +
                                  deleteBtnHtml;
 
-                // 点击卡片跳转详情页（排除删除按钮）
+                // 点击卡片跳转详情页，但排除删除按钮
                 card.addEventListener('click', function(e) {
                     if (e.target.closest('.delete-btn')) {
                         e.preventDefault();
@@ -564,32 +464,46 @@
         });
 
         // ========== 上传视频（多文件） ==========
-document.getElementById('uploadForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    var files = document.getElementById('videoFile').files;
-    if (files.length === 0) return;
-    var title = document.getElementById('videoTitle').value;
-    var category = document.getElementById('videoCategory').value;
-    var csrfToken = document.getElementById('csrfInputUpload').value;
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var files = document.getElementById('videoFile').files;
+            if (files.length === 0) return;
+            var title = document.getElementById('videoTitle').value;
+            var category = document.getElementById('videoCategory').value;
+            var csrfToken = document.getElementById('csrfInputUpload').value;
 
-    for (var i = 0; i < files.length; i++) {
-        var formData = new FormData();
-        // 多文件时片名自动加上序号
-        var fileTitle = title ? title + ' (' + (i+1) + '/' + files.length + ')' : '视频 ' + (i+1);
-        formData.append('title', fileTitle);
-        formData.append('category', category);
-        formData.append('video', files[i]);
-        formData.append('_csrf', csrfToken);
+            for (var i = 0; i < files.length; i++) {
+                var formData = new FormData();
+                var fileTitle = title ? title + ' (' + (i+1) + '/' + files.length + ')' : '视频 ' + (i+1);
+                formData.append('title', fileTitle);
+                formData.append('category', category);
+                formData.append('video', files[i]);
+                formData.append('_csrf', csrfToken);
 
-        var response = await fetch('/api/upload', { method: 'POST', body: formData });
-        if (!response.redirected) {
-            var msg = await response.text();
-            document.getElementById('uploadMsg').textContent = msg;
-        }
-    }
-    // 全部上传完成后刷新页面
-    window.location.href = '/L0Ks.html';
-});
+                var response = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (!response.redirected) {
+                    var msg = await response.text();
+                    document.getElementById('uploadMsg').textContent = msg;
+                }
+            }
+            window.location.href = '/L0Ks.html';
+        });
+
+        // 显示视频时长
+        document.getElementById('videoFile').addEventListener('change', function() {
+            var file = this.files[0];
+            if (!file) return;
+            var videoEl = document.createElement('video');
+            videoEl.preload = 'metadata';
+            videoEl.onloadedmetadata = function() {
+                var duration = Math.round(videoEl.duration);
+                var minutes = Math.floor(duration / 60);
+                var seconds = duration % 60;
+                document.getElementById('videoDuration').textContent = '时长：' + minutes + '分' + seconds + '秒';
+                window.URL.revokeObjectURL(videoEl.src);
+            };
+            videoEl.src = window.URL.createObjectURL(file);
+        });
 
         // 导航栏按钮绑定
         document.getElementById('btnAuth').addEventListener('click', openAuthModal);

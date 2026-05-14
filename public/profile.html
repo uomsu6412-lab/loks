@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - L0Ks</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👤</text></svg>">
+    <style>
+        :root { --bg-start: #0a0a1a; --accent: #e94560; --text: #e0e0e0; }
+        body {
+            font-family: 'Segoe UI', '微软雅黑', sans-serif;
+            background: linear-gradient(135deg, var(--bg-start), #1a1a3e);
+            color: var(--text); padding: 20px;
+        }
+        .back-link { color: var(--accent); text-decoration: none; }
+        h2 { margin-top: 30px; }
+        .video-item {
+            background: rgba(22,33,62,0.85); padding: 12px; margin: 8px 0;
+            border-radius: 12px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .btn { background: var(--accent); color: white; border: none; padding: 6px 16px; border-radius: 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <a href="/L0Ks.html" class="back-link">← 返回首页</a>
+    <h1>👤 <span id="profileUsername"></span> 的个人中心</h1>
+    
+    <h2>📹 我上传的视频</h2>
+    <div id="myVideos"></div>
+
+    <script>
+        async function loadProfile() {
+            var userResp = await fetch('/api/user');
+            var userData = await userResp.json();
+            if (!userData.username) {
+                document.body.innerHTML = '<h2>请先登录</h2><a href="/L0Ks.html">去登录</a>';
+                return;
+            }
+            document.getElementById('profileUsername').textContent = userData.username;
+
+            var videosResp = await fetch('/api/videos');
+            var videos = await videosResp.json();
+            var myVideos = videos.filter(v => v.uploaded_by === userData.username);
+            var container = document.getElementById('myVideos');
+            if (myVideos.length === 0) {
+                container.innerHTML = '<p>你还没有上传过视频</p>';
+                return;
+            }
+            myVideos.forEach(function(v) {
+                var div = document.createElement('div');
+                div.className = 'video-item';
+                div.innerHTML = '<span>' + v.title + '</span>' +
+                    '<button class="btn" onclick="deleteMyVideo(' + v.id + ')">删除</button>';
+                container.appendChild(div);
+            });
+        }
+
+        async function deleteMyVideo(id) {
+            if (!confirm('确定删除吗？')) return;
+            var csrfToken = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/)[1];
+            var resp = await fetch('/api/videos/' + id + '/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ _csrf: csrfToken }).toString()
+            });
+            if (resp.ok) { loadProfile(); }
+            else { alert('删除失败'); }
+        }
+
+        loadProfile();
+    </script>
+</body>
+</html>
