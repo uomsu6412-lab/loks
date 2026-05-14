@@ -185,9 +185,12 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     );
 
     res.redirect('/L0Ks.html');
-  } catch (err) {
-    console.error('上传失败:', err.message);
-    if (err.error) console.error('Cloudinary 错误:', err.error);
+   } catch (err) {
+    // 打印完整的错误对象，包括所有属性
+    console.error('上传失败 - 完整错误:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+    console.error('上传失败 - message:', err.message);
+    console.error('上传失败 - stack:', err.stack);
+    if (err.error) console.error('上传失败 - Cloudinary 原始错误:', JSON.stringify(err.error, null, 2));
     res.send('上传失败，请稍后重试');
   }
 });
