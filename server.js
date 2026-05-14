@@ -4,8 +4,8 @@ const cookieParser = require('cookie-parser');
 const { Pool } = require('pg');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const path = require('path');
+const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
@@ -20,7 +20,6 @@ try {
   console.log('Cloudinary 配置成功');
 } catch (err) {
   console.error('Cloudinary 配置失败:', err.message);
-  // 如果 Cloudinary 配置失败，继续运行但上传功能不可用
 }
 
 // ---- 数据库连接（PostgreSQL） ----
@@ -29,7 +28,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// 初始化表结构
 (async () => {
   try {
     await pool.query(`
@@ -61,16 +59,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---- 文件上传配置（Cloudinary） ----
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'loks-videos',
-    resource_type: 'video',
-    allowed_formats: ['mp4', 'webm', 'mov', 'avi', 'mkv'],
-    transformation: [{ quality: 'auto' }],
-    public_id: (req, file) => uuidv4() + path.extname(file.originalname),
-  },
+// ---- 文件上传配置（磁盘临时存储） ----
+const storage = multer.diskStorage({
+  destination: 'public/videos/',
+  filename: (req, file, cb) => {
+    cb(null, uuidv4() + path.extname(file.originalname));
+  }
 });
 const upload = multer({ storage });
 
@@ -105,7 +99,6 @@ function csrfProtection(req, res, next) {
 // ---- 路由 ----
 app.get('/', (req, res) => res.redirect('/L0Ks.html'));
 
-// 注册
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.send('用户名和密码不能为空');
@@ -123,7 +116,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// 登录
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.send('用户名或密码不能为空');
@@ -148,7 +140,6 @@ app.get('/api/user', (req, res) => {
   res.json({ username: req.cookies.user || null });
 });
 
-// 视频列表
 app.get('/api/videos', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM videos ORDER BY created_at DESC');
@@ -159,7 +150,7 @@ app.get('/api/videos', async (req, res) => {
   }
 });
 
-// 上传视频（存入 Cloudinary）
+// 上传视频（磁盘临时存储 → Cloudinary → 删除临时文件）
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   // 手动 CSRF 检查
   const cookieToken = req.cookies.csrf_token;
@@ -168,13 +159,40 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     return res.status(403).send('CSRF 令牌无效');
   }
   if (!req.cookies.user) return res.status(401).send('请先登录');
+
   const { title } = req.body;
-  const videoUrl = req.file.path;
   try {
-    await pool.query('INSERT INTO videos (title, filename, uploaded_by) VALUES ($1, $2, $3)', [title, videoUrl, req.cookies.user]);
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      resource_type: 'video',
+      folder: 'loks-videos',
+      transformation: [{ quality: 'auto' }]
+    });
+    const videoUrl = result.secure_url;
+
+    // 删除本地临时文件
+    fs.unlinkSync(req.file.path);
+
+    await pool.query('INSERT INTO videos (title, filename, uploaded_by) VALUES ($1, $2, $3)',
+      [title, videoUrl, req.cookies.user]);
     res.redirect('/L0Ks.html');
   } catch (err) {
     console.error('上传失败:', err.message);
+    try { fs.unlinkSync(req.file.path); } catch (e) {}
     res.send('上传失败，请稍后重试');
   }
+});
+
+// ---- 全局错误捕获 ----
+process.on('uncaughtException', (err) => {
+  console.error('未捕获的异常:', err.message, err.stack);
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('未处理的 Promise 拒绝:', reason);
+});
+
+console.log('即将启动服务器...');
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log('私人番剧站已启动 → 端口 ' + port);
 });
