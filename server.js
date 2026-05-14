@@ -153,28 +153,16 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
   const { title } = req.body;
 
   try {
-    // 用 Promise 包装 upload_stream
-    const uploaded = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          resource_type: 'video',
-          folder: 'loks-videos',
-          transformation: [{ quality: 'auto' }],
-          api_key: process.env.CLOUDINARY_API_KEY,
-          api_secret: process.env.CLOUDINARY_API_SECRET,
-          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        }
-      );
+    // 将 buffer 转为 base64 字符串
+    const base64Video = req.file.buffer.toString('base64');
+    const dataUri = `data:${req.file.mimetype};base64,${base64Video}`;
 
-      // 将内存 buffer 转为可读流，喂给 Cloudinary
-      const readableStream = new Readable();
-      readableStream.push(req.file.buffer);
-      readableStream.push(null);
-      readableStream.pipe(stream);
+    // 使用 upload 方法（自动读取全局配置的凭据）
+    const uploaded = await cloudinary.uploader.upload(dataUri, {
+      resource_type: 'video',
+      folder: 'loks-videos',
+      transformation: [{ quality: 'auto' }],
+      public_id: require('uuid').v4(), // 唯一文件名
     });
 
     const videoUrl = uploaded.secure_url;
