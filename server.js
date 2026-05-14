@@ -162,11 +162,14 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
 
   const { title } = req.body;
   try {
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: 'video',
-      folder: 'loks-videos',
-      transformation: [{ quality: 'auto' }]
-    });
+  const result = await cloudinary.uploader.upload(req.file.path, {
+  resource_type: 'video',
+  folder: 'loks-videos',
+  transformation: [{ quality: 'auto' }],
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME
+});
     const videoUrl = result.secure_url;
 
     // 删除本地临时文件
