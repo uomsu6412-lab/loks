@@ -196,6 +196,7 @@ app.post('/api/profile/avatar', uploadAvatar.single('avatar'), async (req, res) 
   try {
     const base64Image = req.file.buffer.toString('base64');
     const dataUri = `data:${req.file.mimetype};base64,${base64Image}`;
+    console.log('Cloudinary 凭据检查:', CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET ? '密钥已设置' : '密钥为空');
     const uploaded = await cloudinary.uploader.upload(dataUri, {
       folder: 'loks-avatars',
       transformation: [{ width: 150, height: 150, crop: 'fill', quality: 'auto' }],
