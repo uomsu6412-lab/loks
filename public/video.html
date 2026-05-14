@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频详情 - L0Ks</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+  <style>
+    :root {
+      --bg-start: #0a0a1a;
+      --bg-end: #1a1a3e;
+      --accent: #e94560;
+      --text: #e0e0e0;
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Segoe UI', '微软雅黑', sans-serif;
+      background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .back-link:hover { text-decoration: underline; }
+    .video-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    video {
+      width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    h1 {
+      margin: 16px 0 8px;
+      font-size: 1.8rem;
+    }
+    .meta {
+      color: #a0a0b0;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+    .meta span {
+      margin-right: 16px;
+    }
+  </style>
+</head>
+<body>
+  <a href="/L0Ks.html" class="back-link">← 返回列表</a>
+  <div class="video-container">
+    <video id="videoPlayer" controls></video>
+    <h1 id="videoTitle"></h1>
+    <div class="meta">
+      <span id="videoUploader"></span>
+      <span id="videoCategory"></span>
+      <span id="videoDate"></span>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (!id) {
+      document.body.innerHTML = '<h2>缺少视频ID</h2>';
+    } else {
+      fetch('/api/videos/' + id)
+        .then(res => res.json())
+        .then(video => {
+          document.title = video.title + ' - L0Ks';
+          document.getElementById('videoPlayer').src = video.filename;
+          document.getElementById('videoTitle').textContent = video.title;
+          document.getElementById('videoUploader').textContent = '上传者：' + video.uploaded_by;
+          document.getElementById('videoCategory').textContent = '分类：' + (video.category || '其他');
+          document.getElementById('videoDate').textContent = '上传时间：' + new Date(video.created_at).toLocaleString();
+        })
+        .catch(() => {
+          document.body.innerHTML = '<h2>视频加载失败</h2>';
+        });
+    }
+  </script>
+</body>
+</html>

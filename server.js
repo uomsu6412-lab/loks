@@ -9,18 +9,21 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 
-// ---- Cloudinary 凭据（从环境变量读取，但不依赖全局配置） ----
+// ==================== 1. Cloudinary 凭据 ====================
+// 作用：从 Render 环境变量读取 Cloudinary 三要素
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
-// ---- 数据库连接（PostgreSQL） ----
+// ==================== 2. 数据库连接 ====================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
+
 (async () => {
   try {
+    // 创建用户表和视频表（如果不存在）
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -36,9 +39,11 @@ const pool = new Pool({
       );
     `);
 
-    // 👇 在这里添加新列
+    // ==================== 3. 动态增加新列 ====================
+    // 作用：后续新增的字段通过 ALTER TABLE 补上，不影响已有数据
     await pool.query('ALTER TABLE videos ADD COLUMN IF NOT EXISTS thumbnail TEXT;');
     await pool.query('ALTER TABLE videos ADD COLUMN IF NOT EXISTS public_id TEXT;');
+    await pool.query("ALTER TABLE videos ADD COLUMN IF NOT EXISTS category TEXT DEFAULT '其他';");
 
     console.log('PostgreSQL 数据库已连接');
   } catch (err) {
@@ -46,23 +51,23 @@ const pool = new Pool({
   }
 })();
 
-// ---- 托管前端静态文件 ----
+// ==================== 4. 托管前端静态文件 ====================
 app.use(express.static('public'));
 
-// ---- CSP 响应头 ----
+// ==================== 5. CSP 响应头 ====================
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self'; img-src 'self' data: https:; connect-src 'self';");
   next();
 });
 
-// ---- multer 内存存储 ----
+// ==================== 6. multer 内存存储 ====================
 const upload = multer({ storage: multer.memoryStorage() });
 
-// ---- 中间件 ----
+// ==================== 7. 中间件 ====================
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-// ---- CSRF 令牌 ----
+// ==================== 8. CSRF 令牌 ====================
 function generateCsrfToken() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
@@ -86,9 +91,10 @@ function csrfProtection(req, res, next) {
   next();
 }
 
-// ---- 路由 ----
+// ==================== 9. 首页重定向 ====================
 app.get('/', (req, res) => res.redirect('/L0Ks.html'));
 
+// ==================== 10. 注册 ====================
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.send('用户名和密码不能为空');
@@ -106,6 +112,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
+// ==================== 11. 登录 ====================
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.send('用户名或密码不能为空');
@@ -126,20 +133,43 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// ==================== 12. 获取当前用户 ====================
 app.get('/api/user', (req, res) => {
   res.json({ username: req.cookies.user || null });
 });
 
+// ==================== 13. 视频列表（支持分类筛选） ====================
 app.get('/api/videos', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM videos ORDER BY created_at DESC');
+    const { category } = req.query;
+    let query = 'SELECT * FROM videos';
+    const params = [];
+    if (category && category !== '全部') {
+      query += ' WHERE category = $1';
+      params.push(category);
+    }
+    query += ' ORDER BY created_at DESC';
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
     console.error('获取视频列表失败:', err.message);
     res.json([]);
   }
 });
-// 删除视频（仅上传者本人可删）
+
+// ==================== 14. 视频详情 ====================
+app.get('/api/videos/:id', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM videos WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).send('视频不存在');
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('获取视频详情失败:', err.message);
+    res.status(500).send('服务器错误');
+  }
+});
+
+// ==================== 15. 删除视频 ====================
 app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
   if (!req.cookies.user) return res.status(401).send('请先登录');
   const { id } = req.params;
@@ -151,7 +181,6 @@ app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
       return res.status(403).send('无权删除他人视频');
     }
 
-    // 从 Cloudinary 删除（如果有 public_id）
     if (video.public_id) {
       try {
         await cloudinary.uploader.destroy(video.public_id, {
@@ -163,13 +192,11 @@ app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
         console.log('Cloudinary 删除成功:', video.public_id);
       } catch (cloudErr) {
         console.error('Cloudinary 删除失败:', cloudErr);
-        // 继续删除数据库记录，避免留下孤儿记录
       }
     } else {
       console.warn('视频缺少 public_id，跳过 Cloudinary 删除:', id);
     }
 
-    // 从数据库删除
     await pool.query('DELETE FROM videos WHERE id = $1', [id]);
     res.send('删除成功');
   } catch (err) {
@@ -181,7 +208,7 @@ app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
   }
 });
 
-// 上传视频（base64 直传，硬编码凭据）
+// ==================== 16. 上传视频 ====================
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   const cookieToken = req.cookies.csrf_token;
   const bodyToken = req.body._csrf;
@@ -191,31 +218,32 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
   if (!req.cookies.user) return res.status(401).send('请先登录');
   if (!req.file) return res.status(400).send('未接收到视频文件');
 
-  const { title } = req.body;
+  const { title, category } = req.body;
+  const safeCategory = category || '其他';
 
   try {
     const base64Video = req.file.buffer.toString('base64');
     const dataUri = `data:${req.file.mimetype};base64,${base64Video}`;
 
-const uploaded = await cloudinary.uploader.upload(dataUri, {
-  resource_type: 'video',
-  folder: 'loks-videos',
-  transformation: [{ quality: 'auto' }],
-  public_id: uuidv4(),
-  api_key: CLOUDINARY_API_KEY,
-  api_secret: CLOUDINARY_API_SECRET,
-  cloud_name: CLOUDINARY_CLOUD_NAME,
-  eager: [{ format: 'jpg', width: 320, height: 180, crop: 'fill' }],
-  eager_async: false,
-});
+    const uploaded = await cloudinary.uploader.upload(dataUri, {
+      resource_type: 'video',
+      folder: 'loks-videos',
+      transformation: [{ quality: 'auto' }],
+      public_id: uuidv4(),
+      api_key: CLOUDINARY_API_KEY,
+      api_secret: CLOUDINARY_API_SECRET,
+      cloud_name: CLOUDINARY_CLOUD_NAME,
+      eager: [{ format: 'jpg', width: 320, height: 180, crop: 'fill' }],
+      eager_async: false,
+    });
 
-const videoUrl = uploaded.secure_url;
-const thumbnailUrl = uploaded.eager[0].secure_url;
+    const videoUrl = uploaded.secure_url;
+    const thumbnailUrl = uploaded.eager[0].secure_url;
 
-await pool.query(
-  'INSERT INTO videos (title, filename, thumbnail, public_id, uploaded_by) VALUES ($1, $2, $3, $4, $5)',
-  [title, videoUrl, thumbnailUrl, uploaded.public_id, req.cookies.user]
-);
+    await pool.query(
+      'INSERT INTO videos (title, filename, thumbnail, public_id, category, uploaded_by) VALUES ($1, $2, $3, $4, $5, $6)',
+      [title, videoUrl, thumbnailUrl, uploaded.public_id, safeCategory, req.cookies.user]
+    );
 
     res.redirect('/L0Ks.html');
   } catch (err) {
@@ -225,7 +253,7 @@ await pool.query(
   }
 });
 
-// ---- 全局错误捕获 ----
+// ==================== 17. 全局错误捕获 ====================
 process.on('uncaughtException', (err) => {
   console.error('未捕获的异常:', err.message, err.stack);
 });
@@ -233,6 +261,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('未处理的 Promise 拒绝:', reason);
 });
 
+// ==================== 18. 启动服务器 ====================
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log('私人番剧站已启动 → 端口 ' + port);

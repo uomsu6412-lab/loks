@@ -56,6 +56,8 @@
             justify-content: space-between;
             padding: 12px 24px;
             border-bottom: 1px solid rgba(255,255,255,0.06);
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .navbar-left {
             display: flex;
@@ -78,6 +80,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
         .navbar .search-box {
             display: flex;
@@ -85,7 +88,7 @@
             gap: 6px;
         }
         .navbar .search-box input {
-            width: 200px;
+            width: 160px;
             padding: 8px 14px;
             border-radius: 20px;
             border: 1px solid rgba(255,255,255,0.15);
@@ -95,22 +98,22 @@
             outline: none;
             transition: border-color 0.2s;
         }
-        .navbar .search-box input:focus {
-            border-color: var(--accent);
-        }
+        .navbar .search-box input:focus { border-color: var(--accent); }
         .navbar .search-box input::placeholder { color: #888; }
-        .navbar .search-box button {
+        .navbar .search-box button, .navbar select {
             padding: 8px 16px;
             border-radius: 20px;
-            background: var(--accent);
+            background: rgba(0,0,0,0.4);
             color: white;
-            border: none;
+            border: 1px solid rgba(255,255,255,0.15);
             cursor: pointer;
             font-size: 0.85rem;
             font-weight: 600;
             transition: transform 0.2s;
+            outline: none;
         }
-        .navbar .search-box button:hover { transform: scale(1.05); }
+        .navbar .search-box button { background: var(--accent); border: none; }
+        .navbar .search-box button:hover, .navbar select:hover { transform: scale(1.05); }
 
         .btn {
             padding: 8px 18px;
@@ -122,14 +125,8 @@
             transition: transform 0.2s;
         }
         .btn:hover { transform: scale(1.05); }
-        .btn-auth {
-            background: linear-gradient(135deg, var(--accent), #c0392b);
-            color: white;
-        }
-        .btn-upload-nav {
-            background: linear-gradient(135deg, #00b894, #0984e3);
-            color: white;
-        }
+        .btn-auth { background: linear-gradient(135deg, var(--accent), #c0392b); color: white; }
+        .btn-upload-nav { background: linear-gradient(135deg, #00b894, #0984e3); color: white; }
 
         /* 主内容区 */
         .main-content {
@@ -141,9 +138,6 @@
             font-size: 1.5rem;
             margin: 0 0 20px;
             color: var(--text);
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
         .card-grid {
             display: grid;
@@ -159,6 +153,7 @@
             transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
+            cursor: pointer;
         }
         .card:hover {
             transform: translateY(-6px);
@@ -192,6 +187,8 @@
             cursor: pointer;
             margin-top: 8px;
             transition: transform 0.2s;
+            z-index: 2;
+            position: relative;
         }
         .card .delete-btn:hover { transform: scale(1.05); }
 
@@ -222,7 +219,7 @@
             margin-bottom: 16px;
             font-size: 1.3rem;
         }
-        .modal-content input {
+        .modal-content input, .modal-content select {
             display: block;
             width: 100%;
             margin: 8px 0 16px;
@@ -299,6 +296,14 @@
                 <input type="text" id="searchInput" placeholder="搜索视频...">
                 <button id="searchBtn">搜索</button>
             </div>
+            <!-- 分类筛选下拉 -->
+            <select id="categoryFilter">
+                <option value="全部">全部分类</option>
+                <option value="动漫">动漫</option>
+                <option value="电影">电影</option>
+                <option value="电视剧">电视剧</option>
+                <option value="其他">其他</option>
+            </select>
             <button id="btnAuth" class="btn btn-auth">登录 / 注册</button>
             <button id="btnUploadNav" class="btn btn-upload-nav" style="display: none;">📤 上传</button>
         </div>
@@ -306,9 +311,7 @@
 
     <!-- 主内容区 -->
     <div class="main-content">
-        <div class="section-title">
-            <span>📺 番剧列表</span>
-        </div>
+        <div class="section-title">📺 番剧列表</div>
         <div class="card-grid" id="videoContainer">
             <div class="empty-state">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -326,7 +329,6 @@
                 <span class="active" data-tab="login">登录</span>
                 <span data-tab="register">注册</span>
             </div>
-            <!-- 登录面板 -->
             <div class="form-panel active" id="loginPanel">
                 <form id="loginForm">
                     <input type="hidden" id="csrfInputLogin" name="_csrf">
@@ -339,7 +341,6 @@
                 </form>
                 <div id="loginMsg" style="margin-top: 10px; font-size: 0.9rem;"></div>
             </div>
-            <!-- 注册面板 -->
             <div class="form-panel" id="registerPanel">
                 <form id="registerForm">
                     <input type="hidden" id="csrfInputReg" name="_csrf">
@@ -362,6 +363,13 @@
             <form id="uploadForm" enctype="multipart/form-data">
                 <input type="hidden" id="csrfInputUpload" name="_csrf">
                 <input id="videoTitle" name="title" placeholder="片名">
+                <!-- 分类选择 -->
+                <select id="videoCategory" name="category">
+                    <option value="动漫">动漫</option>
+                    <option value="电影">电影</option>
+                    <option value="电视剧">电视剧</option>
+                    <option value="其他">其他</option>
+                </select>
                 <input type="file" id="videoFile" name="video" accept="video/*">
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" onclick="closeUploadModal()">取消</button>
@@ -373,7 +381,7 @@
     </div>
 
     <script>
-        // 粒子动画
+        // ========== 粒子动画 ==========
         (function() {
             const container = document.getElementById('particles');
             for (let i = 0; i < 40; i++) {
@@ -407,13 +415,12 @@
         function openUploadModal() { uploadModal.classList.add('open'); fillCsrf(); }
         function closeUploadModal() { uploadModal.classList.remove('open'); }
 
-        // 点击模态框背景关闭
         window.addEventListener('click', function(e) {
             if (e.target === authModal) closeAuthModal();
             if (e.target === uploadModal) closeUploadModal();
         });
 
-        // 选项卡切换
+        // ========== 选项卡切换 ==========
         document.querySelectorAll('.tabs span').forEach(tab => {
             tab.addEventListener('click', function() {
                 document.querySelectorAll('.tabs span').forEach(t => t.classList.remove('active'));
@@ -453,9 +460,11 @@
             }
         }
 
-        // ========== 加载视频列表 ==========
-        async function loadVideos() {
-            var response = await fetch('/api/videos');
+        // ========== 加载视频列表（支持分类） ==========
+        async function loadVideos(category) {
+            var url = '/api/videos';
+            if (category && category !== '全部') url += '?category=' + encodeURIComponent(category);
+            var response = await fetch(url);
             var videos = await response.json();
             var container = document.getElementById('videoContainer');
             container.innerHTML = '';
@@ -471,13 +480,23 @@
             videos.forEach(function(v) {
                 var card = document.createElement('div');
                 card.className = 'card';
+                card.dataset.videoId = v.id;
                 var isOwner = (window.currentUser && v.uploaded_by === window.currentUser);
-                var deleteBtnHtml = isOwner ? `
-                    <button class="delete-btn" onclick="deleteVideo(${v.id})">🗑 删除</button>` : '';
+                var deleteBtnHtml = isOwner ? `<button class="delete-btn">🗑 删除</button>` : '';
                 card.innerHTML = '<video controls src="' + v.filename + '" poster="' + (v.thumbnail || '') + '"></video>' +
                                  '<h3>' + v.title + '</h3>' +
-                                 '<div class="meta">上传者：' + v.uploaded_by + '</div>' +
+                                 '<div class="meta">上传者：' + v.uploaded_by + ' | 分类：' + (v.category || '其他') + '</div>' +
                                  deleteBtnHtml;
+
+                // 点击卡片跳转详情页（排除删除按钮）
+                card.addEventListener('click', function(e) {
+                    if (e.target.closest('.delete-btn')) {
+                        e.preventDefault();
+                        deleteVideo(v.id);
+                    } else {
+                        window.location.href = '/video.html?id=' + v.id;
+                    }
+                });
                 container.appendChild(card);
             });
         }
@@ -492,16 +511,18 @@
                 body: new URLSearchParams({ _csrf: csrfToken }).toString()
             });
             if (response.ok) {
-                loadVideos();
+                loadVideos(document.getElementById('categoryFilter').value);
             } else {
                 alert('删除失败：' + await response.text());
             }
         }
 
-        // ========== 搜索 ==========
+        // ========== 搜索与分类筛选 ==========
         document.getElementById('searchBtn').addEventListener('click', function() {
-            // 目前只是重新加载列表，后续可结合后端搜索
-            loadVideos();
+            loadVideos(document.getElementById('categoryFilter').value);
+        });
+        document.getElementById('categoryFilter').addEventListener('change', function() {
+            loadVideos(this.value);
         });
 
         // ========== 登录 ==========
@@ -538,7 +559,6 @@
             var msg = await response.text();
             document.getElementById('registerMsg').textContent = msg;
             if (msg === '注册成功！') {
-                // 自动切换到登录面板
                 document.querySelector('.tabs span[data-tab="login"]').click();
             }
         });
@@ -548,6 +568,7 @@
             e.preventDefault();
             var formData = new FormData();
             formData.append('title', document.getElementById('videoTitle').value);
+            formData.append('category', document.getElementById('videoCategory').value);
             formData.append('video', document.getElementById('videoFile').files[0]);
             formData.append('_csrf', document.getElementById('csrfInputUpload').value);
             var response = await fetch('/api/upload', { method: 'POST', body: formData });
