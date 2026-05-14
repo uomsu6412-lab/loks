@@ -5,240 +5,242 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>🎬 L0Ks - 私人番剧站</title>
+    <title>🎬 L0Ks · 私人映像</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
     <link rel="manifest" href="/manifest.json">
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
     <style>
         :root {
-            --bg-start: #0a0a1a; --bg-end: #1a1a3e;
-            --card-bg: rgba(22, 33, 62, 0.85);
-            --accent: #e94560; --accent2: #8b5cf6;
-            --text: #e0e0e0; --text-secondary: #a0a0b0;
-            --nav-bg: rgba(10, 10, 26, 0.8);
+            --bg-deep: #05050f;
+            --bg-card: rgba(15, 15, 35, 0.55);
+            --border-card: rgba(255, 255, 255, 0.04);
+            --accent: #ff4d6a;
+            --accent-soft: #ff7b93;
+            --accent2: #9b5de5;
+            --text-primary: #f0f0f7;
+            --text-secondary: #8a8a9a;
+            --nav-bg: rgba(8, 8, 20, 0.65);
+            --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.5);
+            --radius-card: 28px;
+            --radius-btn: 26px;
             --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
-            font-family: 'Segoe UI', '微软雅黑', Arial, sans-serif;
-            background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
-            color: var(--text); min-height: 100vh; overflow-x: hidden; position: relative;
-            touch-action: manipulation; /* 消除移动端300ms点击延迟 */
+            font-family: 'Segoe UI', 'Inter', '微软雅黑', system-ui, sans-serif;
+            background: radial-gradient(ellipse at 50% 0%, #1a1a3a 0%, var(--bg-deep) 70%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            touch-action: manipulation;
+            background-attachment: fixed;
+            letter-spacing: 0.01em;
         }
-        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-        .particle { position: absolute; border-radius: 50%; background: rgba(233,69,96,0.4); animation: float linear infinite; }
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        .particle { position: absolute; border-radius: 50%; background: rgba(155,93,229,0.2); animation: float linear infinite; }
         @keyframes float {
             0% { transform: translateY(100vh) scale(0); opacity: 0; }
             10% { opacity: 1; } 90% { opacity: 1; }
             100% { transform: translateY(-10vh) scale(1); opacity: 0; }
         }
 
-        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        /* ========== Toast系统 ========== */
+        .toast-container { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; }
         .toast {
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
-            color: white; padding: 12px 24px; border-radius: 30px;
-            font-size: 0.9rem; animation: toastIn 0.3s ease;
-            border: 1px solid rgba(255,255,255,0.2); max-width: 300px; word-break: break-word;
+            background: rgba(20, 20, 40, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: white;
+            padding: 14px 24px;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            animation: toastIn 0.25s cubic-bezier(0.2, 0, 0, 1);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: var(--shadow-lg);
+            max-width: 320px;
+            word-break: break-word;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .toast.success { border-color: #00b894; }
-        .toast.error { border-color: #e94560; }
-        @keyframes toastIn { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+        .toast.success { border-left: 3px solid #00c9a7; }
+        .toast.error { border-left: 3px solid var(--accent); }
+        .toast.warning { border-left: 3px solid #f0a500; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
 
+        /* ========== 骨架屏 ========== */
         .skeleton-card {
-            background: var(--card-bg); border-radius: 20px; padding: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4); animation: pulse 1.5s infinite;
+            background: var(--bg-card); border-radius: var(--radius-card); padding: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3); animation: pulse 1.8s infinite;
+            border: 1px solid var(--border-card);
         }
         .skeleton-thumb {
-            width: 100%; aspect-ratio: 16/9; background: rgba(255,255,255,0.05);
-            border-radius: 12px; margin-bottom: 12px;
+            width: 100%; aspect-ratio: 16/9; background: rgba(255,255,255,0.03);
+            border-radius: 16px; margin-bottom: 14px;
         }
-        .skeleton-text { height: 16px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px; width: 60%; }
+        .skeleton-text { height: 14px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 8px; width: 60%; }
         .skeleton-text.short { width: 40%; }
         @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
 
+        /* ========== 导航栏 ========== */
         .navbar {
             position: sticky; top: 0; z-index: 100;
-            background: var(--nav-bg); backdrop-filter: blur(16px);
+            background: var(--nav-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
             display: flex; align-items: center; justify-content: space-between;
-            padding: 12px 24px; border-bottom: 1px solid rgba(255,255,255,0.06);
-            flex-wrap: nowrap; gap: 8px;
+            padding: 12px 24px; border-bottom: 1px solid rgba(255,255,255,0.04);
+            flex-wrap: nowrap; gap: 10px;
         }
-        .navbar-left { display: flex; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0; }
+        .navbar-left { display: flex; align-items: center; gap: 10px; cursor: pointer; flex-shrink: 0; }
         .navbar-left .avatar-img {
-            width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
+            width: 34px; height: 34px; border-radius: 50%; object-fit: cover;
             border: 2px solid rgba(255,255,255,0.2); flex-shrink: 0;
+            transition: border-color 0.2s;
         }
+        .navbar-left:hover .avatar-img { border-color: var(--accent); }
         .navbar-left .avatar-placeholder {
-            width: 32px; height: 32px; border-radius: 50%;
-            background: rgba(255,255,255,0.2); display: inline-flex;
-            align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;
+            width: 34px; height: 34px; border-radius: 50%;
+            background: rgba(255,255,255,0.08); display: inline-flex;
+            align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;
         }
         .navbar-logo {
-            font-size: 1.5rem; font-weight: bold;
+            font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px;
             background: linear-gradient(135deg, var(--accent), var(--accent2));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text; white-space: nowrap;
         }
-        .navbar-user { font-size: 0.9rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
+        .navbar-user { font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
         .navbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         .search-box { display: flex; align-items: center; gap: 4px; }
         .search-box input {
-            width: 140px; padding: 8px 12px; border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.4);
+            width: 140px; padding: 8px 14px; border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
             color: white; font-size: 0.85rem; outline: none;
+            transition: border-color 0.2s, background 0.2s;
         }
-        .search-box input:focus { border-color: var(--accent); }
-        .search-box input::placeholder { color: #888; }
+        .search-box input:focus { border-color: var(--accent); background: rgba(255,255,255,0.08); }
+        .search-box input::placeholder { color: #6a6a7a; }
         .search-box button, .navbar select, .btn {
-            padding: 8px 14px; border-radius: 20px;
-            background: rgba(0,0,0,0.4); color: white;
-            border: 1px solid rgba(255,255,255,0.15); cursor: pointer;
-            font-size: 0.85rem; font-weight: 600; transition: transform 0.2s; outline: none;
-            white-space: nowrap;
+            padding: 8px 16px; border-radius: var(--radius-btn);
+            background: rgba(255,255,255,0.06); color: white;
+            border: 1px solid rgba(255,255,255,0.08); cursor: pointer;
+            font-size: 0.85rem; font-weight: 600; transition: all 0.2s; outline: none;
+            white-space: nowrap; letter-spacing: -0.2px;
         }
-        .search-box button { background: var(--accent); border: none; }
-        .search-box button:hover, .navbar select:hover, .btn:hover { transform: scale(1.05); }
-        .btn-auth { background: linear-gradient(135deg, var(--accent), #c0392b); }
-        .btn-upload-nav { background: linear-gradient(135deg, #00b894, #0984e3); }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .search-box button { background: var(--accent); border: none; padding: 8px 18px; }
+        .search-box button:hover, .navbar select:hover, .btn:hover { transform: scale(1.02); background: rgba(255,255,255,0.12); box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+        .search-box button:hover { background: #ff5e79; }
+        .btn-auth { background: linear-gradient(135deg, var(--accent), #d93850); border: none; }
+        .btn-upload-nav { background: linear-gradient(135deg, #00c9a7, #009b82); border: none; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-        .main-content { position: relative; z-index: 1; padding: 20px 24px calc(60px + var(--safe-bottom)); }
-        .section-title { font-size: 1.5rem; margin: 0 0 20px; color: var(--text); }
+        /* ========== 主内容区 ========== */
+        .main-content { position: relative; z-index: 1; padding: 24px 24px calc(60px + var(--safe-bottom)); }
+        .section-title { font-size: 1.5rem; font-weight: 700; margin: 0 0 20px; color: var(--text-primary); letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
         .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
         .card {
-            background: var(--card-bg); backdrop-filter: blur(12px);
-            border-radius: 20px; padding: 16px; cursor: pointer;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
-            transition: all 0.3s ease; display: flex; flex-direction: column;
+            background: var(--bg-card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-radius: var(--radius-card); padding: 16px; cursor: pointer;
+            border: 1px solid var(--border-card);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+            display: flex; flex-direction: column;
         }
         .card:hover {
             transform: translateY(-6px);
-            box-shadow: 0 16px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(233,69,96,0.3);
+            border-color: rgba(255,255,255,0.1);
+            box-shadow: 0 18px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,77,106,0.15);
         }
         .card video, .card img {
-            width: 100%; border-radius: 12px; margin-bottom: 12px;
+            width: 100%; border-radius: 16px; margin-bottom: 14px;
             background: #000; aspect-ratio: 16/9; object-fit: cover;
         }
-        .card h3 { font-size: 1.1rem; margin: 0 0 6px; color: white; }
-        .card .meta { font-size: 0.8rem; color: var(--text-secondary); margin-top: auto; }
+        .card h3 { font-size: 1.1rem; font-weight: 600; margin: 0 0 6px; color: white; }
+        .card .meta { font-size: 0.8rem; color: var(--text-secondary); margin-top: auto; display: flex; align-items: center; gap: 6px; }
         .card .delete-btn {
-            background: #e94560; color: white; border: none;
-            padding: 4px 12px; border-radius: 15px; font-size: 0.8rem;
+            background: rgba(255,77,106,0.1); color: var(--accent); border: 1px solid rgba(255,77,106,0.2);
+            padding: 5px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
             cursor: pointer; margin-top: 8px; z-index: 2; position: relative;
+            transition: all 0.2s;
         }
-        .card .delete-btn:hover { transform: scale(1.05); }
+        .card .delete-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
 
+        /* ========== 模态框 ========== */
         .modal {
             display: none; position: fixed; z-index: 200; left: 0; top: 0;
             width: 100%; height: 100%; background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(6px); justify-content: center; align-items: center;
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            justify-content: center; align-items: center;
         }
         .modal.open { display: flex; }
         .modal-content {
-            background: var(--card-bg); backdrop-filter: blur(20px);
-            border-radius: 24px; padding: 30px; width: 100%; max-width: 400px;
-            box-shadow: 0 16px 48px rgba(0,0,0,0.6); color: white;
+            background: var(--bg-card); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border-radius: 28px; padding: 30px; width: 100%; max-width: 400px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 24px 56px rgba(0,0,0,0.6); color: white;
             max-height: 80vh; overflow-y: auto;
         }
-        .modal-content h3 { margin-bottom: 16px; font-size: 1.3rem; }
+        .modal-content h3 { margin-bottom: 16px; font-size: 1.3rem; font-weight: 600; }
         .modal-content input, .modal-content select {
             display: block; width: 100%; margin: 8px 0 16px;
-            padding: 10px 14px; border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.35);
-            color: white; font-size: 0.95rem;
+            padding: 12px 14px; border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.3);
+            color: white; font-size: 0.95rem; outline: none;
         }
-        .modal-content input::placeholder { color: #888; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-content input::placeholder { color: #6a6a7a; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
         .modal-actions button {
-            padding: 8px 20px; border-radius: 20px; border: none;
-            cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: transform 0.2s;
+            padding: 10px 22px; border-radius: 24px; border: none;
+            cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s;
         }
-        .modal-actions button:hover { transform: scale(1.05); }
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-secondary { background: rgba(255,255,255,0.15); color: white; }
+        .modal-actions button:hover { transform: scale(1.02); }
+        .btn-primary { background: linear-gradient(135deg, var(--accent), #d93850); color: white; }
+        .btn-secondary { background: rgba(255,255,255,0.08); color: white; }
         .tabs {
-            display: flex; gap: 12px; margin-bottom: 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;
+            display: flex; gap: 12px; margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 10px;
         }
         .tabs span {
             cursor: pointer; font-weight: 600; color: var(--text-secondary);
-            padding-bottom: 4px; transition: color 0.2s;
+            padding-bottom: 4px; transition: color 0.2s; font-size: 1rem;
         }
-        .tabs span.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .tabs span.active { color: white; border-bottom: 2px solid var(--accent); }
         .form-panel { display: none; }
         .form-panel.active { display: block; }
 
         .empty-state { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
-        .empty-state svg { width: 80px; height: 80px; margin-bottom: 20px; opacity: 0.6; }
+        .empty-state svg { width: 80px; height: 80px; margin-bottom: 20px; opacity: 0.4; }
 
-        /* ========== 手机端深度优化 ========== */
+        /* ========== 手机端 ========== */
         @media (max-width: 768px) {
-            .navbar {
-                padding: 8px 12px;
-                gap: 4px;
-            }
-            .navbar-left { gap: 4px; }
-            .navbar-left .avatar-img, .navbar-left .avatar-placeholder {
-                width: 26px; height: 26px;
-            }
-            .navbar-logo { font-size: 1.1rem; }
-            .navbar-user { font-size: 0.7rem; max-width: 60px; }
+            .navbar { padding: 8px 12px; gap: 6px; }
+            .navbar-left { gap: 6px; }
+            .navbar-left .avatar-img, .navbar-left .avatar-placeholder { width: 28px; height: 28px; }
+            .navbar-logo { font-size: 1.2rem; }
+            .navbar-user { font-size: 0.7rem; max-width: 50px; }
             .navbar-right { gap: 4px; }
-            .search-box input {
-                width: 70px;
-                padding: 6px 8px;
-                font-size: 0.7rem;
-            }
-            .search-box button,
-            .navbar select,
-            .btn {
-                padding: 6px 8px;
-                font-size: 0.68rem;
-                border-radius: 15px;
-            }
-            /* 分类下拉在手机端隐藏文字，只保留图标 */
-            .navbar select {
-                width: auto;
-                min-width: 40px;
-            }
-            .card-grid {
-                grid-template-columns: 1fr;
-                gap: 16px;
-                padding: 0 8px;
-            }
-            .main-content {
-                padding: 15px 8px calc(60px + var(--safe-bottom));
-            }
-            .section-title { font-size: 1.2rem; margin-bottom: 12px; }
-            .modal-content {
-                margin: 0 12px;
-                padding: 20px;
-                max-height: 75vh;
-                border-radius: 20px;
-            }
-            .toast-container {
-                top: 10px;
-                right: 10px;
-                left: 10px;
-            }
-            .toast {
-                font-size: 0.8rem;
-                padding: 10px 18px;
-                max-width: 100%;
-            }
-            /* 强制视频内联播放，禁止系统接管 */
+            .search-box input { width: 70px; padding: 6px 10px; font-size: 0.75rem; }
+            .search-box button, .navbar select, .btn { padding: 6px 10px; font-size: 0.7rem; border-radius: 20px; }
+            .navbar select { width: auto; min-width: 36px; }
+            .card-grid { grid-template-columns: 1fr; gap: 16px; padding: 0 4px; }
+            .main-content { padding: 16px 12px calc(60px + var(--safe-bottom)); }
+            .section-title { font-size: 1.3rem; margin-bottom: 14px; }
+            .modal-content { margin: 0 12px; padding: 20px; max-height: 75vh; border-radius: 24px; }
+            .toast-container { top: 10px; right: 10px; left: 10px; }
+            .toast { font-size: 0.8rem; padding: 12px 18px; max-width: 100%; }
             video {
-                -webkit-playsinline: true !important;
-                playsinline: true !important;
-                x5-playsinline: true !important;
-                x5-video-player-type: h5 !important;
-                x5-video-player-fullscreen: true !important;
-                max-width: 100%;
-                height: auto;
-                z-index: 1;
+                -webkit-playsinline: true !important; playsinline: true !important;
+                x5-playsinline: true !important; x5-video-player-type: h5 !important;
+                x5-video-player-fullscreen: true !important; max-width: 100%; height: auto; z-index: 1;
             }
-            /* 骨架屏适配 */
             .skeleton-card { padding: 12px; }
         }
     </style>
@@ -300,7 +302,7 @@
                         <button type="submit" class="btn-primary">登录</button>
                     </div>
                 </form>
-                <div id="loginMsg" style="margin-top: 10px;"></div>
+                <div id="loginMsg" style="margin-top: 12px; font-size: 0.85rem;"></div>
             </div>
             <div class="form-panel" id="registerPanel">
                 <form id="registerForm">
@@ -312,14 +314,14 @@
                         <button type="submit" class="btn-primary">注册</button>
                     </div>
                 </form>
-                <div id="registerMsg" style="margin-top: 10px;"></div>
+                <div id="registerMsg" style="margin-top: 12px; font-size: 0.85rem;"></div>
             </div>
         </div>
     </div>
 
     <div class="modal" id="uploadModal">
         <div class="modal-content">
-            <h3>📤 分享片源</h3>
+            <h3>📤 分享映像</h3>
             <form id="uploadForm" enctype="multipart/form-data">
                 <input type="hidden" id="csrfInputUpload" name="_csrf">
                 <input id="videoTitle" name="title" placeholder="片名">
@@ -330,38 +332,42 @@
                     <option value="其他">其他</option>
                 </select>
                 <input type="file" id="videoFile" name="videos" accept="video/*" multiple>
-                <span id="videoDuration" style="color: #a0a0b0; font-size: 0.85rem;"></span>
+                <span id="videoDuration" style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-top: 4px;"></span>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" onclick="closeUploadModal()">取消</button>
                     <button type="submit" class="btn-primary" id="uploadSubmitBtn">上传</button>
                 </div>
             </form>
-            <div id="uploadMsg" style="margin-top: 10px;"></div>
+            <div id="uploadMsg" style="margin-top: 12px; font-size: 0.85rem;"></div>
         </div>
     </div>
 
     <script>
+        // ========== Toast系统 ==========
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
             toast.className = 'toast ' + type;
-            toast.textContent = message;
+            const icons = { success: '✓', error: '✗', warning: '!' };
+            toast.innerHTML = `<span style="font-weight:600;">${icons[type] || ''}</span> ${message}`;
             container.appendChild(toast);
-            setTimeout(() => { toast.remove(); }, 2500);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.2s'; setTimeout(() => toast.remove(), 200); }, 2800);
         }
 
+        // ========== 粒子动画 ==========
         (function() {
             const container = document.getElementById('particles');
-            for (let i = 0; i < 40; i++) {
+            for (let i = 0; i < 35; i++) {
                 const p = document.createElement('div'); p.className = 'particle';
                 p.style.left = Math.random() * 100 + '%';
                 p.style.width = p.style.height = Math.random() * 4 + 2 + 'px';
-                p.style.animationDuration = Math.random() * 20 + 15 + 's';
-                p.style.animationDelay = Math.random() * 10 + 's';
+                p.style.animationDuration = Math.random() * 22 + 16 + 's';
+                p.style.animationDelay = Math.random() * 12 + 's';
                 container.appendChild(p);
             }
         })();
 
+        // ========== 工具函数 ==========
         function getCsrfToken() {
             var match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
             return match ? match[1] : '';
@@ -373,6 +379,7 @@
             document.getElementById('csrfInputUpload').value = token;
         }
 
+        // ========== 模态框控制 ==========
         const authModal = document.getElementById('authModal');
         const uploadModal = document.getElementById('uploadModal');
         function openAuthModal() { authModal.classList.add('open'); fillCsrf(); }
@@ -384,6 +391,7 @@
             if (e.target === uploadModal) closeUploadModal();
         });
 
+        // ========== 选项卡切换 ==========
         document.querySelectorAll('.tabs span').forEach(tab => {
             tab.addEventListener('click', function() {
                 document.querySelectorAll('.tabs span').forEach(t => t.classList.remove('active'));
@@ -396,8 +404,10 @@
             });
         });
 
+        // ========== 页面初始化 ==========
         window.addEventListener('DOMContentLoaded', function() { fillCsrf(); checkLogin(); loadVideos(); loadContinueWatching(); });
 
+        // ========== 检查登录状态 ==========
         async function checkLogin() {
             var response = await fetch('/api/user');
             var data = await response.json();
@@ -437,6 +447,7 @@
             }
         }
 
+        // ========== 加载视频列表 ==========
         async function loadVideos(category) {
             var url = '/api/videos';
             if (category && category !== '全部') url += '?category=' + encodeURIComponent(category);
@@ -449,25 +460,26 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <p>还没有人分享片源，成为第一个吧！</p>
+                    <p>这里还空无一物，静候你的分享。</p>
                 </div>`;
                 return;
             }
             videos.forEach(function(v) {
                 var card = document.createElement('div'); card.className = 'card';
                 var isOwner = (window.currentUser && v.uploaded_by === window.currentUser);
-                var deleteBtnHtml = isOwner ? '<button class="delete-btn">🗑 删除</button>' : '';
+                var deleteBtnHtml = isOwner ? '<button class="delete-btn">移除</button>' : '';
                 var optimizedUrl = v.filename.replace('/upload/', '/upload/f_mp4,vc_h264,ac_aac,q_auto/');
                 card.innerHTML = '<video controls playsinline x5-video-player-type="h5" x5-video-player-fullscreen="true" src="' + optimizedUrl + '" poster="' + (v.thumbnail || '') + '"></video>' +
-                                 '<h3>' + v.title + '</h3><div class="meta">上传者：' + v.uploaded_by + ' | 分类：' + (v.category || '其他') + '</div>' + deleteBtnHtml;
+                                 '<h3>' + v.title + '</h3><div class="meta">' + v.uploaded_by + ' · ' + (v.category || '其他') + '</div>' + deleteBtnHtml;
                 card.addEventListener('click', function(e) {
-                    if (e.target.closest('.delete-btn')) { e.preventDefault(); deleteVideo(v.id); }
+                    if (e.target.closest('.delete-btn')) { e.preventDefault(); e.stopPropagation(); requestDelete(v.id); }
                     else { window.location.href = '/video.html?id=' + v.id; }
                 });
                 container.appendChild(card);
             });
         }
 
+        // ========== 继续观看列表 ==========
         function loadContinueWatching() {
             const container = document.getElementById('continueWatchingContainer');
             const section = document.getElementById('continueWatchingSection');
@@ -497,43 +509,58 @@
             });
         }
 
+        // ========== 删除视频（带确认） ==========
+        function requestDelete(id) {
+            if (confirm('确定要移除这部映像吗？此操作无法撤销。')) {
+                deleteVideo(id);
+            }
+        }
         async function deleteVideo(id) {
-            if (!confirm('确定删除？')) return;
             var resp = await fetch('/api/videos/' + id + '/delete', {
                 method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ _csrf: getCsrfToken() }).toString()
             });
-            if (resp.ok) { showToast('删除成功'); loadVideos(document.getElementById('categoryFilter').value); }
-            else showToast('删除失败：' + await resp.text(), 'error');
+            if (resp.ok) { showToast('已移除'); loadVideos(document.getElementById('categoryFilter').value); }
+            else { showToast('移除失败', 'error'); }
         }
 
+        // ========== 搜索与分类 ==========
         document.getElementById('searchBtn').addEventListener('click', () => loadVideos(document.getElementById('categoryFilter').value));
         document.getElementById('categoryFilter').addEventListener('change', function() { loadVideos(this.value); });
 
+        // ========== 登录（带按钮loading） ==========
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            var btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true; btn.textContent = '登录中...';
             var resp = await fetch('/login', {
                 method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ username: document.getElementById('loginUsername').value, password: document.getElementById('loginPassword').value, _csrf: getCsrfToken() }).toString()
             });
             var msg = await resp.text();
             document.getElementById('loginMsg').textContent = msg;
-            if (msg === '登录成功！') { showToast('登录成功'); closeAuthModal(); checkLogin(); loadVideos(); }
-            else showToast(msg, 'error');
+            btn.disabled = false; btn.textContent = '登录';
+            if (msg === '登录成功！') { showToast('欢迎回来'); closeAuthModal(); checkLogin(); loadVideos(); }
+            else { showToast(msg, 'error'); }
         });
 
+        // ========== 注册 ==========
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            var btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true; btn.textContent = '注册中...';
             var resp = await fetch('/register', {
                 method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ username: document.getElementById('regUsername').value, password: document.getElementById('regPassword').value, _csrf: getCsrfToken() }).toString()
             });
             var msg = await resp.text();
             document.getElementById('registerMsg').textContent = msg;
+            btn.disabled = false; btn.textContent = '注册';
             if (msg === '注册成功！') { showToast('注册成功，请登录'); document.querySelector('.tabs span[data-tab="login"]').click(); }
-            else showToast(msg, 'error');
+            else { showToast(msg, 'error'); }
         });
 
+        // ========== 上传（多文件，带loading） ==========
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             var files = document.getElementById('videoFile').files;
@@ -552,15 +579,16 @@
                 await fetch('/api/upload', { method: 'POST', body: formData });
             }
             submitBtn.disabled = false; submitBtn.textContent = '上传';
-            showToast('上传完成'); window.location.href = '/L0Ks.html';
+            showToast('映像已收录'); window.location.href = '/L0Ks.html';
         });
 
+        // ========== 视频时长显示 ==========
         document.getElementById('videoFile').addEventListener('change', function() {
             var file = this.files[0]; if (!file) return;
             var v = document.createElement('video'); v.preload = 'metadata';
             v.onloadedmetadata = function() {
                 var m = Math.floor(v.duration / 60), s = Math.round(v.duration % 60);
-                document.getElementById('videoDuration').textContent = '时长：' + m + '分' + s + '秒';
+                document.getElementById('videoDuration').textContent = '时长 ' + m + '分' + s + '秒';
                 URL.revokeObjectURL(v.src);
             };
             v.src = URL.createObjectURL(file);
