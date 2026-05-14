@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>🎬 L0Ks - 私人番剧站</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
     <link rel="manifest" href="/manifest.json">
@@ -30,7 +30,6 @@
             100% { transform: translateY(-10vh) scale(1); opacity: 0; }
         }
 
-        /* ---------- Toast ---------- */
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast {
             background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
@@ -42,7 +41,6 @@
         .toast.error { border-color: #e94560; }
         @keyframes toastIn { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
 
-        /* ---------- 骨架屏 ---------- */
         .skeleton-card {
             background: var(--card-bg); border-radius: 20px; padding: 16px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.4); animation: pulse 1.5s infinite;
@@ -55,7 +53,6 @@
         .skeleton-text.short { width: 40%; }
         @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
 
-        /* ---------- 导航栏 ---------- */
         .navbar {
             position: sticky; top: 0; z-index: 100;
             background: var(--nav-bg); backdrop-filter: blur(16px);
@@ -101,7 +98,6 @@
         .btn-upload-nav { background: linear-gradient(135deg, #00b894, #0984e3); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-        /* ---------- 主内容区 ---------- */
         .main-content { position: relative; z-index: 1; padding: 20px 24px 60px; }
         .section-title { font-size: 1.5rem; margin: 0 0 20px; color: var(--text); }
         .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
@@ -128,7 +124,6 @@
         }
         .card .delete-btn:hover { transform: scale(1.05); }
 
-        /* ---------- 模态框 ---------- */
         .modal {
             display: none; position: fixed; z-index: 200; left: 0; top: 0;
             width: 100%; height: 100%; background: rgba(0,0,0,0.7);
@@ -171,70 +166,29 @@
         .empty-state { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
         .empty-state svg { width: 80px; height: 80px; margin-bottom: 20px; opacity: 0.6; }
 
-        /* ========== 手机端适配 ========== */
+        /* 手机端优化：强制视频内联播放、防止覆盖UI */
         @media (max-width: 768px) {
-            .navbar {
-                padding: 8px 12px;
-                gap: 6px;
-            }
-            .navbar-left {
-                gap: 6px;
-            }
-            .navbar-left .avatar-img,
-            .navbar-left .avatar-placeholder {
-                width: 28px;
-                height: 28px;
-            }
-            .navbar-logo {
-                font-size: 1.2rem;
-            }
-            .navbar-user {
-                font-size: 0.75rem;
-                max-width: 80px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-            .navbar-right {
-                gap: 4px;
-            }
-            .search-box input {
-                width: 90px;
-                padding: 6px 10px;
-                font-size: 0.75rem;
-            }
-            .search-box button,
-            .navbar select,
-            .btn {
-                padding: 6px 10px;
-                font-size: 0.7rem;
-                border-radius: 15px;
-            }
-            .card-grid {
-                grid-template-columns: 1fr;
-                gap: 16px;
-                padding: 0 12px;
-            }
-            .main-content {
-                padding: 15px 8px 40px;
-            }
-            .section-title {
-                font-size: 1.2rem;
-                margin-bottom: 12px;
-            }
-            .modal-content {
-                margin: 0 16px;
-                padding: 20px;
-            }
-            .toast-container {
-                top: 10px;
-                right: 10px;
-                left: 10px;
-            }
-            .toast {
-                font-size: 0.8rem;
-                padding: 10px 18px;
+            .navbar { padding: 8px 12px; gap: 6px; }
+            .navbar-left { gap: 6px; }
+            .navbar-left .avatar-img, .navbar-left .avatar-placeholder { width: 28px; height: 28px; }
+            .navbar-logo { font-size: 1.2rem; }
+            .navbar-user { font-size: 0.75rem; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .navbar-right { gap: 4px; }
+            .search-box input { width: 90px; padding: 6px 10px; font-size: 0.75rem; }
+            .search-box button, .navbar select, .btn { padding: 6px 10px; font-size: 0.7rem; border-radius: 15px; }
+            .card-grid { grid-template-columns: 1fr; gap: 16px; padding: 0 12px; }
+            .main-content { padding: 15px 8px 40px; }
+            .section-title { font-size: 1.2rem; margin-bottom: 12px; }
+            .modal-content { margin: 0 16px; padding: 20px; }
+            .toast-container { top: 10px; right: 10px; left: 10px; }
+            .toast { font-size: 0.8rem; padding: 10px 18px; max-width: 100%; }
+            /* 确保视频在小屏幕上内联播放 */
+            video {
+                -webkit-playsinline: true;
+                playsinline: true;
+                x5-playsinline: true;
                 max-width: 100%;
+                height: auto;
             }
         }
     </style>
@@ -243,7 +197,6 @@
     <div class="toast-container" id="toastContainer"></div>
     <div class="particles" id="particles"></div>
 
-    <!-- 顶部导航栏 -->
     <nav class="navbar">
         <div class="navbar-left" onclick="window.location.href='/profile.html'">
             <img id="navbarAvatar" class="avatar-img" src="" alt="头像" style="display: none;">
@@ -268,7 +221,6 @@
         </div>
     </nav>
 
-    <!-- 主内容区 -->
     <div class="main-content">
         <div id="continueWatchingSection" style="display: none;">
             <div class="section-title">⏳ 继续观看</div>
@@ -282,7 +234,6 @@
         </div>
     </div>
 
-    <!-- 登录/注册模态框 -->
     <div class="modal" id="authModal">
         <div class="modal-content">
             <div class="tabs">
@@ -316,7 +267,6 @@
         </div>
     </div>
 
-    <!-- 上传模态框 -->
     <div class="modal" id="uploadModal">
         <div class="modal-content">
             <h3>📤 分享片源</h3>
@@ -445,15 +395,20 @@
             var container = document.getElementById('videoContainer');
             container.innerHTML = '';
             if (videos.length === 0) {
-                container.innerHTML = `<div class="empty-state">...</div>`;
+                container.innerHTML = `<div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <p>还没有人分享片源，成为第一个吧！</p>
+                </div>`;
                 return;
             }
             videos.forEach(function(v) {
                 var card = document.createElement('div'); card.className = 'card';
                 var isOwner = (window.currentUser && v.uploaded_by === window.currentUser);
                 var deleteBtnHtml = isOwner ? '<button class="delete-btn">🗑 删除</button>' : '';
-                var optimizedUrl = v.filename.replace('/upload/', '/upload/f_auto,q_auto/');
-                card.innerHTML = '<video controls src="' + optimizedUrl + '" poster="' + (v.thumbnail || '') + '"></video>' +
+                var optimizedUrl = v.filename.replace('/upload/', '/upload/f_mp4,q_auto/');
+                card.innerHTML = '<video controls playsinline src="' + optimizedUrl + '" poster="' + (v.thumbnail || '') + '"></video>' +
                                  '<h3>' + v.title + '</h3><div class="meta">上传者：' + v.uploaded_by + ' | 分类：' + (v.category || '其他') + '</div>' + deleteBtnHtml;
                 card.addEventListener('click', function(e) {
                     if (e.target.closest('.delete-btn')) { e.preventDefault(); deleteVideo(v.id); }
@@ -485,7 +440,7 @@
                     const video = await resp.json();
                     const card = document.createElement('div'); card.className = 'card';
                     const mins = Math.floor(item.time / 60), secs = Math.floor(item.time % 60);
-                    card.innerHTML = `<video src="${video.filename.replace('/upload/', '/upload/f_auto,q_auto/')}" poster="${video.thumbnail || ''}" style="pointer-events:none;"></video><h3>${video.title}</h3><div class="meta">继续从 ${mins}分${secs}秒 观看</div>`;
+                    card.innerHTML = `<video controls playsinline src="${video.filename.replace('/upload/', '/upload/f_mp4,q_auto/')}" poster="${video.thumbnail || ''}" style="pointer-events:none;"></video><h3>${video.title}</h3><div class="meta">继续从 ${mins}分${secs}秒 观看</div>`;
                     card.addEventListener('click', function() { window.location.href = '/video.html?id=' + video.id; });
                     container.appendChild(card);
                 } catch (err) { localStorage.removeItem('l0ks_video_' + item.id); }
