@@ -147,24 +147,53 @@
                 const isAdminResp = await fetch('/api/profile');
                 const isAdmin = (await isAdminResp.json()).is_admin;
 
-                container.innerHTML = comments.map(c => {
-                    const canDelete = (currentUser === c.username) || isAdmin;
-                    const deleteBtn = canDelete
-                        ? `<button class="delete-comment-btn" onclick="deleteComment(${c.id})" title="删除">🗑️</button>`
-                        : '';
-                    return `
-                        <div class="comment-item">
-                            <div class="comment-header">
-                                <span class="comment-username">${c.username}</span>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span class="comment-time">${new Date(c.created_at).toLocaleString()}</span>
-                                    ${deleteBtn}
-                                </div>
-                            </div>
-                            <div class="comment-content">${c.content}</div>
-                        </div>
-                    `;
-                }).join('');
+                 // 安全渲染：使用 createElement + textContent，防止 XSS
+                 container.innerHTML = '';
+                 comments.forEach(c => {
+                 const item = document.createElement('div');
+                 item.className = 'comment-item';
+
+                 const header = document.createElement('div');
+                 header.className = 'comment-header';
+
+                 const username = document.createElement('span');
+                  username.className = 'comment-username';
+                 username.textContent = c.username;
+
+                 const headerRight = document.createElement('div');
+                 headerRight.style.display = 'flex';
+                 headerRight.style.alignItems = 'center';
+                 headerRight.style.gap = '8px';
+
+                 const time = document.createElement('span');
+                 time.className = 'comment-time';
+                 time.textContent = new Date(c.created_at).toLocaleString();
+
+                 headerRight.appendChild(time);
+
+                // 删除按钮（仅作者本人或管理员可见）
+                const canDelete = (currentUser === c.username) || isAdmin;
+                if (canDelete) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-comment-btn';
+                    deleteBtn.textContent = '🗑️';
+                    deleteBtn.title = '删除';
+                    deleteBtn.onclick = () => deleteComment(c.id);
+                    headerRight.appendChild(deleteBtn);
+                }
+
+                header.appendChild(username);
+                header.appendChild(headerRight);
+
+                const content = document.createElement('div');
+                content.className = 'comment-content';
+                content.textContent = c.content;
+                content.style.whiteSpace = 'pre-wrap';
+
+                item.appendChild(header);
+                item.appendChild(content);
+                container.appendChild(item);
+            });
             } catch (err) {
                 container.innerHTML = '<p style="color: #8a8a9a; text-align: center;">评论加载失败</p>';
             }
