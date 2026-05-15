@@ -6,6 +6,7 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { v4: uuidv4 } = require('uuid');
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 
@@ -15,7 +16,19 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// ---- Cloudinary 凭据（硬编码） ----
+// ---- 登录/注册限流 ----
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分钟
+  max: 10, // 最多10次尝试
+  message: '操作过于频繁，请15分钟后再试',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/login', authLimiter);
+app.use('/register', authLimiter);
+
+// ---- Cloudinary 凭据 ----
 const CLOUDINARY_CLOUD_NAME = 'dyh7g2qu5';
 const CLOUDINARY_API_KEY = '923574445472679';
 const CLOUDINARY_API_SECRET = 'yUYJYLx-hI0kvYjTVfjG2rLOpYc';
@@ -49,16 +62,15 @@ const pool = new Pool({
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false;');
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();');
-    // 创建评论表
     await pool.query(`
-    CREATE TABLE IF NOT EXISTS comments (
-    id SERIAL PRIMARY KEY,
-    video_id INTEGER NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-    username TEXT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  );
-`);
+      CREATE TABLE IF NOT EXISTS comments (
+        id SERIAL PRIMARY KEY,
+        video_id INTEGER NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+        username TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
     console.log('PostgreSQL 数据库已连接');
   } catch (err) {
     console.error('数据库初始化失败:', err.message);
@@ -77,16 +89,33 @@ app.use((req, res, next) => {
 // ---- 文件上传限制 ----
 const videoFilter = (req, file, cb) => {
   const allowedMimes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
-  if (allowedMimes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('仅支持 MP4、WebM、MOV、AVI、MKV 格式'), false);
+  if (!allowedMimes.includes(file.mimetype)) {
+    return cb(new Error('仅支持 MP4、WebM、MOV、AVI、MKV 格式'), false);
   }
+
+  const magicBytes = {
+    'video/mp4': [0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70],
+    'video/webm': [0x1A, 0x45, 0xDF, 0xA3],
+    'video/quicktime': [0x00, 0x00, 0x00, 0x14, 0x66, 0x74, 0x79, 0x70],
+    'video/x-msvideo': [0x52, 0x49, 0x46, 0x46],
+    'video/x-matroska': [0x1A, 0x45, 0xDF, 0xA3]
+  };
+
+  const header = file.buffer.slice(0, 8);
+  const expected = magicBytes[file.mimetype];
+  if (expected) {
+    const match = expected.every((byte, index) => header[index] === byte);
+    if (!match) {
+      return cb(new Error('文件内容与扩展名不匹配，可能是恶意文件'), false);
+    }
+  }
+
+  cb(null, true);
 };
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 3 }, // 2GB，最多3个文件（实际单文件上传）
+  limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 3 },
   fileFilter: videoFilter
 });
 
@@ -104,7 +133,7 @@ const tokenStore = new Map();
 app.use((req, res, next) => {
   if (!req.cookies.csrf_token) {
     const token = generateCsrfToken();
-    res.cookie('csrf_token', token, { httpOnly: false, sameSite: 'lax' });
+    res.cookie('csrf_token', token, { httpOnly: false, sameSite: 'lax', secure: true });
     tokenStore.set(token, true);
   }
   res.locals.csrfToken = req.cookies.csrf_token || '';
@@ -139,7 +168,7 @@ async function adminRequired(req, res, next) {
 
 app.get('/', (req, res) => res.redirect('/L0Ks.html'));
 
-// --- 注册（自动登录） ---
+// --- 注册 ---
 app.post('/register', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.send('用户名和密码不能为空');
@@ -150,7 +179,7 @@ app.post('/register', async (req, res) => {
       await pool.query('DELETE FROM users WHERE username = $1', [username]);
     }
     await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
-    res.cookie('user', username, { httpOnly: true, sameSite: 'lax' });
+    res.cookie('user', username, { httpOnly: true, sameSite: 'strict', secure: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
     res.send('注册成功！');
   } catch (err) {
     console.error('注册出错:', err.message);
@@ -168,7 +197,7 @@ app.post('/login', async (req, res) => {
     if (!user || !user.password) return res.send('用户名或密码错误');
     const match = await bcrypt.compare(password, user.password);
     if (match) {
-      res.cookie('user', username, { httpOnly: true, sameSite: 'lax' });
+      res.cookie('user', username, { httpOnly: true, sameSite: 'strict', secure: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
       res.send('登录成功！');
     } else {
       res.send('用户名或密码错误');
@@ -184,7 +213,7 @@ app.get('/api/user', (req, res) => {
   res.json({ username: req.cookies.user || null });
 });
 
-// --- 用户资料（返回 is_admin） ---
+// --- 用户资料 ---
 app.get('/api/profile', async (req, res) => {
   if (!req.cookies.user) return res.status(401).json({ error: '未登录' });
   try {
@@ -306,73 +335,6 @@ app.get('/api/videos/:id', async (req, res) => {
     res.status(500).send('服务器错误');
   }
 });
-// ==================== 评论 API ====================
-
-// 获取评论列表
-app.get('/api/videos/:id/comments', async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT id, username, content, created_at FROM comments WHERE video_id = $1 ORDER BY created_at DESC',
-      [req.params.id]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error('获取评论失败:', err.message);
-    res.json([]);
-  }
-});
-
-// 提交评论
-app.post('/api/videos/:id/comments', csrfProtection, async (req, res) => {
-  if (!req.cookies.user) return res.status(401).send('请先登录');
-  const { content } = req.body;
-  if (!content || content.trim().length === 0) return res.status(400).send('评论内容不能为空');
-  if (content.length > 500) return res.status(400).send('评论不能超过500字');
-
-  try {
-    await pool.query(
-      'INSERT INTO comments (video_id, username, content) VALUES ($1, $2, $3)',
-      [req.params.id, req.cookies.user, content.trim()]
-    );
-    res.send('评论成功');
-  } catch (err) {
-    console.error('提交评论失败:', err.message);
-    res.status(500).send('评论失败，请稍后重试');
-  }
-});
-
-// 删除评论（作者本人或管理员）
-app.delete('/api/videos/:id/comments/:commentId', async (req, res) => {
-  if (!req.cookies.user) return res.status(401).send('请先登录');
-  const { commentId } = req.params;
-
-  try {
-    // 查询评论信息
-    const commentResult = await pool.query('SELECT * FROM comments WHERE id = $1', [commentId]);
-    if (commentResult.rows.length === 0) return res.status(404).send('评论不存在');
-
-    const comment = commentResult.rows[0];
-
-    // 检查是否为评论作者或管理员
-    const isAuthor = (comment.username === req.cookies.user);
-    let isAdmin = false;
-
-    if (!isAuthor) {
-      const adminResult = await pool.query('SELECT is_admin FROM users WHERE username = $1', [req.cookies.user]);
-      isAdmin = adminResult.rows.length > 0 && adminResult.rows[0].is_admin;
-    }
-
-    if (!isAuthor && !isAdmin) {
-      return res.status(403).send('无权删除此评论');
-    }
-
-    await pool.query('DELETE FROM comments WHERE id = $1', [commentId]);
-    res.send('删除成功');
-  } catch (err) {
-    console.error('删除评论失败:', err.message);
-    res.status(500).send('删除失败');
-  }
-});
 
 // --- 删除视频 ---
 app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
@@ -405,7 +367,7 @@ app.post('/api/videos/:id/delete', csrfProtection, async (req, res) => {
   }
 });
 
-// --- 上传视频（单文件，2GB 限制） ---
+// --- 上传视频 ---
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   const cookieToken = req.cookies.csrf_token;
   const bodyToken = req.body._csrf;
@@ -450,6 +412,61 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
   }
 });
 
+// --- 评论 API ---
+app.get('/api/videos/:id/comments', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, username, content, created_at FROM comments WHERE video_id = $1 ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('获取评论失败:', err.message);
+    res.json([]);
+  }
+});
+
+app.post('/api/videos/:id/comments', csrfProtection, async (req, res) => {
+  if (!req.cookies.user) return res.status(401).send('请先登录');
+  const { content } = req.body;
+  if (!content || content.trim().length === 0) return res.status(400).send('评论内容不能为空');
+  if (content.length > 500) return res.status(400).send('评论不能超过500字');
+  try {
+    await pool.query(
+      'INSERT INTO comments (video_id, username, content) VALUES ($1, $2, $3)',
+      [req.params.id, req.cookies.user, content.trim()]
+    );
+    res.send('评论成功');
+  } catch (err) {
+    console.error('提交评论失败:', err.message);
+    res.status(500).send('评论失败，请稍后重试');
+  }
+});
+
+app.delete('/api/videos/:id/comments/:commentId', async (req, res) => {
+  if (!req.cookies.user) return res.status(401).send('请先登录');
+  const { commentId } = req.params;
+  try {
+    const commentResult = await pool.query('SELECT * FROM comments WHERE id = $1', [commentId]);
+    if (commentResult.rows.length === 0) return res.status(404).send('评论不存在');
+    const comment = commentResult.rows[0];
+    const isAuthor = (comment.username === req.cookies.user);
+    let isAdmin = false;
+    if (!isAuthor) {
+      const adminResult = await pool.query('SELECT is_admin FROM users WHERE username = $1', [req.cookies.user]);
+      isAdmin = adminResult.rows.length > 0 && adminResult.rows[0].is_admin;
+    }
+    if (!isAuthor && !isAdmin) {
+      return res.status(403).send('无权删除此评论');
+    }
+    await pool.query('DELETE FROM comments WHERE id = $1', [commentId]);
+    res.send('删除成功');
+  } catch (err) {
+    console.error('删除评论失败:', err.message);
+    res.status(500).send('删除失败');
+  }
+});
+
 // --- 管理员 API ---
 app.get('/api/admin/users', adminRequired, async (req, res) => {
   try {
@@ -477,7 +494,6 @@ app.delete('/api/admin/videos/:id', adminRequired, async (req, res) => {
     const result = await pool.query('SELECT * FROM videos WHERE id = $1', [id]);
     const video = result.rows[0];
     if (!video) return res.status(404).send('视频不存在');
-
     if (video.public_id) {
       try {
         await cloudinary.uploader.destroy(video.public_id, {
@@ -490,7 +506,6 @@ app.delete('/api/admin/videos/:id', adminRequired, async (req, res) => {
         console.error('Cloudinary 删除失败:', cloudErr);
       }
     }
-
     await pool.query('DELETE FROM videos WHERE id = $1', [id]);
     res.send('删除成功');
   } catch (err) {

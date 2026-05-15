@@ -2,8 +2,8 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理后台 - L0Ks</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🛡️ 管理后台 · L0Ks</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
     <style>
         :root { --bg-start: #0a0a1a; --accent: #e94560; --text: #e0e0e0; --card-bg: rgba(22,33,62,0.85); }
@@ -39,7 +39,6 @@
         <span data-tab="videos">🎬 视频管理</span>
     </div>
 
-    <!-- 用户管理面板 -->
     <div class="panel active" id="usersPanel">
         <table>
             <thead><tr><th>头像</th><th>用户名</th><th>昵称</th><th>管理员</th><th>注册时间</th></tr></thead>
@@ -48,7 +47,6 @@
         <div class="msg" id="usersMsg"></div>
     </div>
 
-    <!-- 视频管理面板 -->
     <div class="panel" id="videosPanel">
         <table>
             <thead><tr><th>标题</th><th>上传者</th><th>分类</th><th>操作</th></tr></thead>
@@ -58,15 +56,13 @@
     </div>
 
     <script>
-        // 选项卡切换
         document.querySelectorAll('.tabs span').forEach(tab => {
             tab.addEventListener('click', function() {
                 document.querySelectorAll('.tabs span').forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
-                const target = this.dataset.tab;
                 document.getElementById('usersPanel').classList.remove('active');
                 document.getElementById('videosPanel').classList.remove('active');
-                if (target === 'users') {
+                if (this.dataset.tab === 'users') {
                     document.getElementById('usersPanel').classList.add('active');
                     loadUsers();
                 } else {
@@ -76,7 +72,6 @@
             });
         });
 
-        // 加载用户列表
         async function loadUsers() {
             try {
                 const resp = await fetch('/api/admin/users');
@@ -85,8 +80,7 @@
                     return;
                 }
                 const users = await resp.json();
-                const tbody = document.getElementById('usersTableBody');
-                tbody.innerHTML = users.map(u => `
+                document.getElementById('usersTableBody').innerHTML = users.map(u => `
                     <tr>
                         <td>${u.avatar ? '<img src="'+u.avatar+'" style="width:24px;height:24px;border-radius:50%;">' : '👤'}</td>
                         <td>${u.username}</td>
@@ -100,7 +94,6 @@
             }
         }
 
-        // 加载视频列表
         async function loadVideos() {
             try {
                 const resp = await fetch('/api/admin/videos');
@@ -109,8 +102,7 @@
                     return;
                 }
                 const videos = await resp.json();
-                const tbody = document.getElementById('videosTableBody');
-                tbody.innerHTML = videos.map(v => `
+                document.getElementById('videosTableBody').innerHTML = videos.map(v => `
                     <tr>
                         <td><a href="/video.html?id=${v.id}" target="_blank">${v.title}</a></td>
                         <td>${v.uploaded_by}</td>
@@ -123,18 +115,13 @@
             }
         }
 
-        // 管理员强制删除视频
         async function deleteVideo(id) {
             if (!confirm('管理员强制删除，确定吗？')) return;
             const resp = await fetch('/api/admin/videos/' + id, { method: 'DELETE' });
-            if (resp.ok) {
-                loadVideos();
-            } else {
-                alert('删除失败：' + await resp.text());
-            }
+            if (resp.ok) { loadVideos(); }
+            else { alert('删除失败：' + await resp.text()); }
         }
 
-        // 初始加载用户列表
         loadUsers();
     </script>
 </body>
